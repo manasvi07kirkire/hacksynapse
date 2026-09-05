@@ -168,9 +168,6 @@ export default function Watch({
         <Link href="/geo" className="border border-bone-300 px-4 py-2 rounded-sm">
           Citation test
         </Link>
-        <Link href="/preview" className="border border-bone-300 px-4 py-2 rounded-sm">
-          Demo scenarios
-        </Link>
       </div>
       <p role="status" className="text-sm font-medium text-ink-900">
         {message}
@@ -192,8 +189,8 @@ export default function Watch({
       {!items.length && (
         <p className="text-bone-700 border border-bone-300 rounded-sm p-6 bg-white">
           {project
-            ? "No deployments yet. Click Analyze to crawl demops.vercel.app and establish a baseline."
-            : "Sign in at /connect and select parth-gholap/demo-ops to begin."}
+            ? "No deployments yet. Analyze the deployed revision to establish a baseline."
+            : "Sign in and connect a repository to begin."}
         </p>
       )}
       {items.map((d) => (
