@@ -10,11 +10,15 @@ async function main() {
   if (process.env.NODE_ENV === "production") productionRequirements();
   const workerId = randomUUID();
   await workerPulse(workerId);
-  let heartbeatFailure = false;
+  let heartbeatMisses = 0;
   const pulse = setInterval(() => {
-    void workerPulse(workerId).catch(() => {
-      heartbeatFailure = true;
-    });
+    void workerPulse(workerId)
+      .then(() => {
+        heartbeatMisses = 0;
+      })
+      .catch(() => {
+        heartbeatMisses += 1;
+      });
   }, 15000);
   let lastMonitor = 0;
   let stopping = false;
@@ -26,15 +30,23 @@ async function main() {
   });
   try {
     while (!stopping) {
-      if (heartbeatFailure) throw new Error("Heartbeat failed");
-      if (Date.now() - lastMonitor > 60000) {
-        const health = await queueHealth();
-        logEvent({ event: "queue_health", outcome: JSON.stringify(health) });
-        if (health.oldestQueuedSeconds > 300 || health.expiredLeases > 0)
-          logEvent({ event: "queue_alert", code: "QUEUE_STALLED" });
-        lastMonitor = Date.now();
+      if (heartbeatMisses >= 10) throw new Error("Heartbeat failed");
+      try {
+        if (Date.now() - lastMonitor > 60000) {
+          const health = await queueHealth();
+          logEvent({ event: "queue_health", outcome: JSON.stringify(health) });
+          if (health.oldestQueuedSeconds > 300 || health.expiredLeases > 0)
+            logEvent({ event: "queue_alert", code: "QUEUE_STALLED" });
+          lastMonitor = Date.now();
+        }
+        if (!(await runOneJob())) await new Promise((r) => setTimeout(r, 1000));
+      } catch (e) {
+        logEvent({
+          event: "worker_loop_error",
+          code: e instanceof Error ? e.message : "unknown",
+        });
+        await new Promise((r) => setTimeout(r, 2000));
       }
-      if (!(await runOneJob())) await new Promise((r) => setTimeout(r, 1000));
     }
   } finally {
     clearInterval(pulse);
@@ -42,8 +54,12 @@ async function main() {
     await db.$disconnect();
   }
 }
-main().catch(async () => {
-  logEvent({ event: "worker_stopped", code: "WORKER_FATAL" });
+main().catch(async (e) => {
+  logEvent({
+    event: "worker_stopped",
+    code: "WORKER_FATAL",
+    outcome: e instanceof Error ? e.message : "unknown",
+  });
   await db.$disconnect();
   process.exitCode = 1;
 });

@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { db } from "../db";
+import { db, dbTransaction } from "../db";
 import { sha, branch } from "../server/validation";
 import { AppError, fail } from "../server/errors";
 import { configurationKey } from "../projects/configuration";
@@ -107,13 +107,14 @@ export async function enqueueAnalysis(
           });
         return job;
       },
-      { isolationLevel: "ReadCommitted" },
+      { isolationLevel: "ReadCommitted", ...dbTransaction },
     ),
   );
 }
 export const LEASE_MS = 180000;
 export async function claimJob() {
-  return db.$transaction(async (tx) => {
+  return db.$transaction(
+    async (tx) => {
     const [{ now }] = await tx.$queryRaw<
       { now: Date }[]
     >`SELECT clock_timestamp() AS now`;
@@ -176,7 +177,7 @@ export async function claimJob() {
       });
     }
     return null;
-  });
+  }, dbTransaction);
 }
 export async function heartbeat(job: {
   id: string;
@@ -199,5 +200,5 @@ export async function heartbeat(job: {
       where: { id: job.id, leaseToken: job.leaseToken },
       data: { leaseUntil },
     });
-  });
+  }, dbTransaction);
 }

@@ -32,15 +32,32 @@ export function ProjectAccess({ children }: { children: ReactNode }) {
     const data = await res.json();
     setProjects(data.projects);
     setError("");
-    setSelected((value) =>
-      data.projects.some((p: ConnectedProject) => p.id === value)
+    setSelected((value) => {
+      const stored =
+        typeof window !== "undefined"
+          ? localStorage.getItem("searchops_project_id")
+          : null;
+      const preferred =
+        stored && data.projects.some((p: ConnectedProject) => p.id === stored)
+          ? stored
+          : data.projects.find((p: ConnectedProject) =>
+              p.repo.includes("demo-ops"),
+            )?.id ||
+            data.projects.find((p: ConnectedProject) =>
+              p.repo.includes("Demo-ops"),
+            )?.id;
+      if (preferred) return preferred;
+      return data.projects.some((p: ConnectedProject) => p.id === value)
         ? value
-        : data.projects[0]?.id || "",
-    );
+        : data.projects[0]?.id || "";
+    });
   }
   useEffect(() => {
     void refresh().catch(() => setError("Project service is unavailable."));
   }, []);
+  useEffect(() => {
+    if (selected) localStorage.setItem("searchops_project_id", selected);
+  }, [selected]);
   const project = projects.find((p) => p.id === selected) || null;
   return (
     <ProjectContext.Provider value={{ project, refresh }}>
@@ -51,6 +68,7 @@ export function ProjectAccess({ children }: { children: ReactNode }) {
         <Link href="/remediation">Recovery & PRs</Link>
         <Link href="/geo">GEO</Link>
         <Link href="/seo-advisor">SEO Advisor</Link>
+        <Link href="/preview">Field Manual demo</Link>
         <select
           aria-label="Connected project"
           value={selected}

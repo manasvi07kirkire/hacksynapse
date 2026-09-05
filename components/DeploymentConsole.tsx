@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useProject } from "./ProjectAccess";
 import { FindingCard } from "./ui/FindingCard";
+import { Gauge } from "./ui/Gauge";
 import { FindingData } from "../lib/detect/types";
 import Link from "next/link";
 interface Deployment {
@@ -132,40 +133,74 @@ export default function Watch({
       setBusy(false);
     }
   }
+  const latest = items[0];
   return (
-    <main className="max-w-5xl mx-auto p-8 space-y-5">
-      <h1 className="text-3xl">
-        {project?.repo || "Select a connected project"}
-      </h1>
-      <p>
-        {view === "regression"
-          ? "Regression evidence"
-          : view === "remediation"
-            ? "Pull requests and verified recovery"
-            : "Deploy → observe → detect → diagnose → remediate → verify"}
-      </p>
-      <div className="flex gap-4">
+    <main className="max-w-6xl mx-auto p-6 sm:p-8 space-y-6 bg-bone-100 min-h-screen">
+      <header className="border-b-2 border-bone-300 pb-5 space-y-2">
+        <p className="font-mono text-xs font-bold text-ember-600 uppercase tracking-widest">
+          Live Watch · Connected project
+        </p>
+        <h1 className="font-mono font-black text-3xl sm:text-4xl text-ink-900">
+          {project?.repo || "Select a connected project"}
+        </h1>
+        <p className="text-sm text-bone-700">
+          {view === "regression"
+            ? "Regression evidence from persisted deployments"
+            : view === "remediation"
+              ? "Pull requests and verified recovery"
+              : "Deploy → observe → detect → diagnose → remediate → verify"}
+        </p>
+      </header>
+      <div className="flex flex-wrap gap-3">
         <button
           disabled={!project || busy}
           onClick={() => void run()}
-          className="bg-ink-900 text-bone-100 p-3 disabled:opacity-50"
+          className="bg-ember-600 hover:bg-ember-600/90 text-bone-100 px-5 py-2.5 rounded-sm font-semibold disabled:opacity-50"
         >
           Analyze current deployment
         </button>
-        <Link href="/graph">Graph</Link>
-        <Link href="/seo-advisor">SEO Advisor</Link>
-        <Link href="/geo">Citation test</Link>
+        <Link href="/graph" className="border border-bone-300 px-4 py-2 rounded-sm">
+          Graph
+        </Link>
+        <Link href="/seo-advisor" className="border border-bone-300 px-4 py-2 rounded-sm">
+          SEO Advisor
+        </Link>
+        <Link href="/geo" className="border border-bone-300 px-4 py-2 rounded-sm">
+          Citation test
+        </Link>
+        <Link href="/preview" className="border border-bone-300 px-4 py-2 rounded-sm">
+          Demo scenarios
+        </Link>
       </div>
-      <p role="status">{message}</p>
+      <p role="status" className="text-sm font-medium text-ink-900">
+        {message}
+      </p>
+      {latest?.score && (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <Gauge
+            value={latest.score.searchHealth}
+            title="Search Crawler Health"
+            lensLabel="SEARCH LENS"
+          />
+          <Gauge
+            value={latest.score.geoScore}
+            title="AI-Answer Citation-Readiness (GEO)"
+            lensLabel="AI-ANSWER LENS"
+          />
+        </section>
+      )}
       {!items.length && (
-        <p>
+        <p className="text-bone-700 border border-bone-300 rounded-sm p-6 bg-white">
           {project
-            ? "No deployments to display. Analyze the deployed revision to establish a baseline."
-            : "Sign in and connect a repository to begin."}
+            ? "No deployments yet. Click Analyze to crawl demops.vercel.app and establish a baseline."
+            : "Sign in at /connect and select parth-gholap/demo-ops to begin."}
         </p>
       )}
       {items.map((d) => (
-        <article key={d.id} className="border p-4 space-y-3">
+        <article
+          key={d.id}
+          className="border border-bone-300 bg-white rounded-md p-5 space-y-3 shadow-sm"
+        >
           <h2>
             Deployment #{d.deployNumber} · {d.status} · {d.sha.slice(0, 12)}
           </h2>

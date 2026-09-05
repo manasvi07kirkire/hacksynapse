@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db, dbTransaction } from "../db";
 import { crawlRoutes, SiteFetcher } from "../crawler/crawl-routes";
 import { buildDiscoverabilityGraph, GRAPH_VERSION } from "../graph/builder";
 import { GraphSnapshotData } from "../graph/types";
@@ -271,7 +271,7 @@ export async function runDeploymentAnalysis(
           data: { leaseUntil: null, leaseToken: null },
         });
       },
-      { timeout: 20000 },
+      dbTransaction,
     );
     await gh
       .status(
@@ -346,7 +346,7 @@ export async function runOneJob(
             errorCode: errorCode(e),
           },
         });
-      });
+      }, dbTransaction);
     } catch {
       logEvent({
         event: "analysis_cleanup_failed",

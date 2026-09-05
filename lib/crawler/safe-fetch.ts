@@ -45,6 +45,11 @@ export interface FetchOptions {
   signal?: AbortSignal;
   contentTypes?: string[];
 }
+export function pickPinnedAddress(
+  addresses: { address: string; family: number }[],
+) {
+  return addresses.find((a) => a.family === 4) ?? addresses[0];
+}
 export async function safeFetch(
   value: string,
   options: FetchOptions = {},
@@ -96,7 +101,7 @@ export async function safeFetch(
       (!privateAllowed && addresses.some((a) => !isPublicAddress(a.address)))
     )
       fail(400, "SSRF_BLOCKED", "Target address is not public.");
-    const pinned = addresses[0];
+    const pinned = pickPinnedAddress(addresses);
     const response = await new Promise<FetchResult>((resolve, reject) => {
       const request = (url.protocol === "https:" ? https : http).request(
         url,
@@ -109,7 +114,13 @@ export async function safeFetch(
             Accept: "text/html,application/xml,text/plain",
             "Accept-Encoding": "identity",
           },
-          lookup: (_host, _options, callback) => {
+          lookup: (_host, lookupOptions, callback) => {
+            if (lookupOptions?.all) {
+              callback(null, [
+                { address: pinned.address, family: pinned.family },
+              ]);
+              return;
+            }
             callback(null, pinned.address, pinned.family);
           },
         },
