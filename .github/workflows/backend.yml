@@ -1,0 +1,32 @@
+name: Backend verification
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/unused
+      DIRECT_URL: postgresql://placeholder:placeholder@127.0.0.1:5432/unused
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:legacy
+      - run: npm run test:integration
+      - run: npm run db:validate
+      - run: npm audit --audit-level=moderate
+      - run: npm run build
+      - run: npm run test:smoke
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: docker build -f Dockerfile.worker -t searchops-worker:test .

@@ -62,7 +62,7 @@ export const DeploymentStrip: React.FC<DeploymentStripProps> = ({
                       ? isRegression
                         ? "bg-ink-750 border-l-4 border-l-ember-400 border-ink-700 shadow-sm"
                         : "bg-ink-750 border-l-4 border-l-patina-400 border-ink-700 shadow-sm"
-                      : "bg-ink-850 border-ink-700 hover:border-line-500 hover:bg-ink-750"
+                      : "bg-ink-850 border-ink-700 hover:border-line-500 hover:bg-ink-750",
                   )}
                 >
                   {/* Deploy # and Status */}
@@ -70,7 +70,7 @@ export const DeploymentStrip: React.FC<DeploymentStripProps> = ({
                     <span
                       className={clsx(
                         "font-mono text-sm font-black tabular-nums",
-                        isActive ? "text-bone-100" : "text-bone-300"
+                        isActive ? "text-bone-100" : "text-bone-300",
                       )}
                     >
                       #{d.deployNumber}
@@ -87,18 +87,26 @@ export const DeploymentStrip: React.FC<DeploymentStripProps> = ({
                       <span
                         className={clsx(
                           "font-mono text-xs font-bold tabular-nums",
-                          d.deltaSearch! < 0 ? "text-ember-400" : "text-patina-400"
+                          d.deltaSearch! < 0
+                            ? "text-ember-400"
+                            : "text-patina-400",
                         )}
                       >
-                        {d.deltaSearch! > 0 ? `+${d.deltaSearch}` : d.deltaSearch}
+                        {d.deltaSearch! > 0
+                          ? `+${d.deltaSearch}`
+                          : d.deltaSearch}
                       </span>
                     )}
                   </div>
 
                   {/* Commit info preview on wider screens */}
                   <div className="hidden lg:flex flex-col text-xs font-mono text-bone-400 pl-2 border-l border-ink-700">
-                    <span className="truncate max-w-[150px] text-bone-200 font-sans font-medium">{d.commitMsg}</span>
-                    <span>{d.sha} · {d.author}</span>
+                    <span className="truncate max-w-[150px] text-bone-200 font-sans font-medium">
+                      {d.commitMsg}
+                    </span>
+                    <span>
+                      {d.sha} · {d.author}
+                    </span>
                   </div>
                 </button>
               </React.Fragment>

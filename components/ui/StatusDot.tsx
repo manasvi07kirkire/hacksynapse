@@ -1,7 +1,8 @@
 import React from "react";
 import clsx from "clsx";
 
-export type StatusType = "PASS" | "DEGRADED" | "REGRESSION" | "HEALTHY" | "REMEDIATED";
+export type StatusType =
+  "PASS" | "DEGRADED" | "REGRESSION" | "HEALTHY" | "REMEDIATED";
 
 interface StatusDotProps {
   status: StatusType;
@@ -53,7 +54,7 @@ export const StatusDot: React.FC<StatusDotProps> = ({
         "inline-flex items-center font-mono uppercase tracking-wider rounded-sm border",
         colorClasses,
         sizeClasses,
-        className
+        className,
       )}
     >
       <span className="text-xs leading-none" aria-hidden="true">

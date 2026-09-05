@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id            String       @id @default(cuid())
+  repo          String       // e.g. "acme/web-store"
+  siteUrl       String       // e.g. "https://staging.acme.com"
+  routeManifest String       // JSON string of routes array
+  installId     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deployments   Deployment[]
+}
+
+model Deployment {
+  id            String          @id @default(cuid())
+  projectId     String
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sha           String          // commit sha (e.g. "c9a41f8")
+  deployNumber  Int             // e.g. 183, 184, 185
+  ref           String          // e.g. "refs/heads/main"
+  commitMsg     String          // e.g. "fix: refactor product layout and metadata generator"
+  author        String          // e.g. "sarah-dev"
+  status        String          // "HEALTHY", "REGRESSION", "REMEDIATED", "RUNNING"
+  createdAt     DateTime        @default(now())
+  
+  snapshots     GraphSnapshot[]
+  findings      Finding[]
+  score         Score?
+}
+
+model GraphSnapshot {
+  id           String     @id @default(cuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  
+  nodes        Node[]
+  edges        Edge[]
+}
+
+model Node {
+  id          String        @id @default(cuid())
+  snapshotId  String
+  snapshot    GraphSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  type        String        // "page", "template", "schema", "signal"
+  url         String        // e.g. "/products/machined-caliper"
+  key         String        // identifier key
+  title       String?
+  health      String        // "PASS" (patina), "DEGRADED" (marigold), "REGRESSION" (ember)
+  attrs       String        // JSON serialized properties (meta tags, schema types, status)
+  
+  fromEdges   Edge[]        @relation("FromEdges")
+  toEdges     Edge[]        @relation("ToEdges")
+  citationTests CitationTest[]
+}
+
+model Edge {
+  id          String        @id @default(cuid())
+  snapshotId  String
+  snapshot    GraphSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  fromNodeId  String
+  toNodeId    String
+  fromNode    Node          @relation("FromEdges", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode      Node          @relation("ToEdges", fields: [toNodeId], references: [id], onDelete: Cascade)
+  kind        String        // "links_to", "canonical_to", "renders_from", "has_schema"
+}
+
+model Finding {
+  id            String        @id @default(cuid())
+  deploymentId  String
+  deployment    Deployment    @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  type          String        // "CANONICAL_STRIPPED", "NOINDEX_FLIPPED", "SCHEMA_REMOVED", "ORPHAN_PAGE"
+  severity      String        // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+  confidence    Int           // 0 to 100
+  lens          String        // "search", "ai-answer", "both"
+  title         String
+  description   String        // LLM narrated explanation (grounded strictly in evidence)
+  evidence      String        // JSON { pagesAffected: 127, firstBadDeploy: "#184", template: "ProductPage.tsx" }
+  rootCause     String        // JSON { file: "src/app/products/[slug]/page.tsx", line: 184, component: "ProductMetadata" }
+  status        String        // "OPEN", "REMEDIATED", "ACKNOWLEDGED"
+  createdAt     DateTime      @default(now())
+  
+  remediations  Remediation[]
+}
+
+model Remediation {
+  id               String    @id @default(cuid())
+  findingId        String
+  finding          Finding   @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  tier             String    // "TIER_A" (Auto-fix), "TIER_B" (Draft PR), "TIER_C" (Approval)
+  action           String    // e.g. "Restore canonical generator in ProductMetadata"
+  patchDiff        String    // Unified diff string
+  prUrl            String?
+  prNumber         Int?
+  validationResult String    // JSON { staticCheck: true, ruleRecheck: true, buildable: true }
+  status           String    // "READY", "APPLIED", "DRAFT_OPENED", "PENDING_APPROVAL"
+  createdAt        DateTime  @default(now())
+}
+
+model Score {
+  id           String     @id @default(cuid())
+  deploymentId String     @unique
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  searchHealth Int        // 0 to 100
+  geoScore     Int        // 0 to 100
+  deltaSearch  Int        // e.g. -25
+  deltaGeo     Int        // e.g. -27
+  breakdown    String     // JSON details on factors & weights
+  createdAt    DateTime   @default(now())
+}
+
+model CitationTest {
+  id            String    @id @default(cuid())
+  nodeId        String?
+  node          Node?     @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+  url           String
+  query         String
+  modelAnswer   String
+  modelUsed     String
+  groundedFacts String    // JSON array of target facts & match status
+  score         Int       // 1 to 5 segments
+  totalFacts    Int
+  createdAt     DateTime  @default(now())
+}
+
+// -- SEO Advisor (pre-deploy suggestion feature) — additive only --
+
+model SeoScan {
+  id             String          @id @default(cuid())
+  pageUrl        String
+  targetKeywords String          // JSON string array
+  content        String          // JSON serialized AdvisorPageContent, captured at scan time
+  status         String          // "SCANNING", "COMPLETE", "FAILED"
+  createdAt      DateTime        @default(now())
+
+  suggestions    SeoSuggestion[]
+  prs            SeoOptimizationPR[]
+}
+
+model SeoSuggestion {
+  id         String   @id @default(cuid())
+  scanId     String
+  scan       SeoScan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  type       String   // "add-keyword" | "remove-keyword" | "rewrite-title" | "rewrite-meta" | "heading-change" | "internal-link"
+  location   String   // e.g. "H1", "meta description", "paragraph 2"
+  before     String
+  after      String
+  rationale  String
+  confidence Int      // 0 to 100
+  status     String   // "pending" | "approved" | "rejected" | "applied"
+  createdAt  DateTime @default(now())
+}
+
+model SeoOptimizationPR {
+  id                  String   @id @default(cuid())
+  scanId              String
+  scan                SeoScan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  prUrl               String
+  prNumber            Int
+  appliedSuggestionIds String  // JSON string array
+  validationResult    String   // JSON { titleLength, metaLength, duplicateH1, keywordDensityOk }
+  status              String   // "OPEN" (never "MERGED" — SearchOps never merges)
+  createdAt           DateTime @default(now())
+}

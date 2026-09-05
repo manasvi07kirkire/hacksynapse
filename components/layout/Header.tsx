@@ -46,7 +46,10 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden md:inline text-ink-700">|</span>
 
           <span className="hidden lg:inline text-bone-400">
-            Staging: <span className="text-bone-200 font-mono text-xs">https://store.acme-industrial.com</span>
+            Staging:{" "}
+            <span className="text-bone-200 font-mono text-xs">
+              https://store.acme-industrial.com
+            </span>
           </span>
         </div>
 
@@ -59,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
                 "px-2.5 py-1 rounded-sm text-xs font-mono font-bold transition-all shrink-0 uppercase tracking-wider min-h-[32px]",
                 currentDeployNumber === 183
                   ? "bg-patina-tint text-patina-400 border border-patina-400/40"
-                  : "text-bone-400 hover:text-bone-200"
+                  : "text-bone-400 hover:text-bone-200",
               )}
             >
               #183 Healthy
@@ -70,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
                 "px-2.5 py-1 rounded-sm text-xs font-mono font-bold transition-all shrink-0 uppercase tracking-wider min-h-[32px]",
                 currentDeployNumber === 184
                   ? "bg-ember-tint text-ember-400 border border-ember-400/40"
-                  : "text-bone-400 hover:text-bone-200"
+                  : "text-bone-400 hover:text-bone-200",
               )}
             >
               #184 Regression
@@ -81,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
                 "px-2.5 py-1 rounded-sm text-xs font-mono font-bold transition-all shrink-0 uppercase tracking-wider min-h-[32px]",
                 currentDeployNumber === 185
                   ? "bg-patina-tint text-patina-400 border border-patina-400/40"
-                  : "text-bone-400 hover:text-bone-200"
+                  : "text-bone-400 hover:text-bone-200",
               )}
             >
               #185 Remediated
@@ -94,7 +97,9 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-2 px-3.5 py-1.5 bg-ember-500 hover:bg-ember-400 text-bone-100 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 shrink-0 shadow-cta min-h-[36px]"
           >
             <Zap className="w-3.5 h-3.5 text-bone-100" />
-            <span>{isTriggering ? "SIMULATING..." : "SIMULATE POISONED DEPLOY"}</span>
+            <span>
+              {isTriggering ? "SIMULATING..." : "SIMULATE POISONED DEPLOY"}
+            </span>
           </button>
         </div>
       </div>
@@ -124,11 +129,15 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-bone-500">Dual Lenses:</span>
             <span className="text-bone-100 font-bold">1. Search Crawlers</span>
             <span className="text-line-600">·</span>
-            <span className="text-steel-400 font-bold">2. AI Answer Engines</span>
+            <span className="text-steel-400 font-bold">
+              2. AI Answer Engines
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-bone-400 hidden sm:inline font-semibold">Status Checks:</span>
+            <span className="font-mono text-xs text-bone-400 hidden sm:inline font-semibold">
+              Status Checks:
+            </span>
             <RoadmapBadge label="ROADMAP (P2)" />
           </div>
         </div>

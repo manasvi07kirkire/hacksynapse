@@ -2,7 +2,8 @@ import { ExtractedPageData } from "../extract/types";
 
 export type NodeKind = "page" | "template" | "schema" | "signal";
 export type NodeHealth = "PASS" | "DEGRADED" | "REGRESSION";
-export type EdgeKind = "links_to" | "canonical_to" | "renders_from" | "has_schema";
+export type EdgeKind =
+  "links_to" | "canonical_to" | "renders_from" | "has_schema";
 
 export interface GraphNodeData {
   id: string;
@@ -37,6 +38,11 @@ export interface GraphSnapshotData {
   nodes: GraphNodeData[];
   edges: GraphEdgeData[];
   createdAt: string;
+  version?: string;
+  complete?: boolean;
+  sitemapUrls?: string[];
+  llmsTxtValid?: boolean;
+  crawlErrors?: { url: string; code: string }[];
 }
 
 export interface NodeDiff {

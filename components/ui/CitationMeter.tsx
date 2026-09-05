@@ -77,7 +77,12 @@ export const CitationMeter: React.FC<CitationMeterProps> = ({
               disabled={isLoading}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-ink-750 border border-ink-700 text-bone-300 hover:text-bone-100 rounded-sm text-xs font-mono font-bold uppercase tracking-wider transition-all disabled:opacity-50 shrink-0 min-h-[36px]"
             >
-              <RefreshCw className={clsx("w-3.5 h-3.5 text-steel-400", isLoading && "animate-spin text-ember-400")} />
+              <RefreshCw
+                className={clsx(
+                  "w-3.5 h-3.5 text-steel-400",
+                  isLoading && "animate-spin text-ember-400",
+                )}
+              />
               <span>{isLoading ? "TESTING..." : "LIVE TEST"}</span>
             </button>
           )}
@@ -95,7 +100,12 @@ export const CitationMeter: React.FC<CitationMeterProps> = ({
               ({Math.round((score / 5) * 100)}% grounded)
             </span>
           </div>
-          <span className={clsx("font-mono text-xs sm:text-sm font-bold uppercase tracking-wider", textColor)}>
+          <span
+            className={clsx(
+              "font-mono text-xs sm:text-sm font-bold uppercase tracking-wider",
+              textColor,
+            )}
+          >
             {statusText}
           </span>
         </div>
@@ -111,7 +121,7 @@ export const CitationMeter: React.FC<CitationMeterProps> = ({
                   "h-full rounded-sm border transition-all duration-300",
                   isFilled
                     ? `${meterColor}`
-                    : "bg-ink-700 border-ink-700 opacity-60"
+                    : "bg-ink-700 border-ink-700 opacity-60",
                 )}
               />
             );
@@ -137,7 +147,9 @@ export const CitationMeter: React.FC<CitationMeterProps> = ({
                 <span
                   className={clsx(
                     "font-sans",
-                    item.isGrounded ? "text-bone-200 font-medium" : "text-bone-500 line-through"
+                    item.isGrounded
+                      ? "text-bone-200 font-medium"
+                      : "text-bone-500 line-through",
                   )}
                 >
                   {item.fact}

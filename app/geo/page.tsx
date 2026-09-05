@@ -1,312 +1,173 @@
 "use client";
-
-export const dynamic = "force-dynamic";
-
-import React, { useState } from "react";
-import Link from "next/link";
-import { FieldManualNav, FieldManualSidebar } from "@/components/layout/FieldManualNav";
-import {
-  Compass,
-  ArrowLeft,
-  Bot,
-  User,
-  AlertOctagon,
-  CheckCircle2,
-  RefreshCw,
-  Cpu,
-  Sparkles,
-  Layers,
-  Database,
-  Search,
-} from "lucide-react";
-import clsx from "clsx";
-
-export default function GeoCitationPage() {
-  const [isTesting, setIsTesting] = useState(false);
-  const [citationScore, setCitationScore] = useState(2); // 1-5
-  const [modelAnswer, setModelAnswer] = useState(
-    "The Digital Micrometer Caliper appears to be a precision measuring instrument. However, specific pricing, exact tolerance calibration (±0.01mm), and IP67 ingress protection specifications could not be verified in the structured ground-truth metadata."
-  );
-
-  const totalSegments = 5;
-
-  const groundedFacts = [
-    { fact: "Hardened stainless steel housing", grounded: true },
-    { fact: "±0.01mm calibration accuracy", grounded: false },
-    { fact: "$149.00 MSRP price entity", grounded: false },
-    { fact: "IP67 water resistance rating", grounded: false },
-    { fact: "Dual LCD digital display", grounded: true },
-  ];
-
-  const handleReRunTest = async () => {
-    setIsTesting(true);
+import { useEffect, useRef, useState } from "react";
+import { useProject } from "../../components/ProjectAccess";
+type Citation = {
+  modelAnswer: string;
+  modelUsed: string;
+  score: number;
+  groundedFacts: {
+    fact: string;
+    isGrounded: boolean;
+    sourceSupported?: boolean;
+  }[];
+};
+export default function GeoPage() {
+  const { project } = useProject();
+  const [url, setUrl] = useState("");
+  const [query, setQuery] = useState("Summarize the documented facts.");
+  const [facts, setFacts] = useState("");
+  const [result, setResult] = useState<Citation | null>(null);
+  const [score, setScore] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    pending.current?.abort();
+    setBusy(false);
+    setError("");
+    setResult(null);
+    setScore(null);
+    setFacts("");
+    setUrl(project?.siteUrl || "");
+    if (project)
+      void fetch(`/api/geo?projectId=${project.id}`, {
+        signal: controller.signal,
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          if (controller.signal.aborted) return;
+          setScore(data.score?.geoScore ?? null);
+          if (data.citationTest)
+            setResult({
+              ...data.citationTest,
+              groundedFacts:
+                typeof data.citationTest.groundedFacts === "string"
+                  ? JSON.parse(data.citationTest.groundedFacts)
+                  : data.citationTest.groundedFacts,
+            });
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setError(e.message);
+        });
+    return () => {
+      controller.abort();
+      pending.current?.abort();
+    };
+  }, [project]);
+  async function run() {
+    if (!project || busy) return;
+    const controller = new AbortController();
+    pending.current = controller;
+    setBusy(true);
+    setError("");
     try {
-      const res = await fetch("/api/citation-test", {
+      const expectedFacts = facts
+        .split("\n")
+        .map((f) => f.trim())
+        .filter(Boolean);
+      const response = await fetch("/api/citation-test", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
         body: JSON.stringify({
-          url: "/products/digital-micrometer-caliper",
-          query: "What are the exact calibration tolerances and MSRP of the caliper?",
-          expectedFacts: groundedFacts.map((f) => f.fact),
+          projectId: project.id,
+          url,
+          query,
+          ...(expectedFacts.length ? { expectedFacts } : {}),
         }),
       });
-      const data = await res.json();
-      if (data.score) {
-        setCitationScore(data.score);
-      }
-      if (data.modelAnswer) {
-        setModelAnswer(data.modelAnswer);
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      if (!controller.signal.aborted) setResult(data);
     } catch (e) {
-      console.error(e);
+      if (!controller.signal.aborted)
+        setError(e instanceof Error ? e.message : "Citation test failed.");
     } finally {
-      setIsTesting(false);
+      if (!controller.signal.aborted) setBusy(false);
     }
-  };
-
+  }
   return (
-    <div className="min-h-screen bg-bone-100 text-ink-900 flex flex-col font-sans">
-      {/* Top Navigation */}
-      <FieldManualNav currentDeployNumber={184} />
-
-      <div className="flex-1 flex w-full">
-        {/* Sidebar */}
-        <FieldManualSidebar />
-
-        {/* Main Content Area: 5-Col / 7-Col Split */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col gap-6 max-w-[1300px]">
-          {/* Breadcrumb & Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b-2 border-bone-300 pb-5">
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Link href="/" className="flex items-center gap-1.5 font-sans text-sm text-bone-700 hover:text-ink-900 transition-colors">
-                  <ArrowLeft className="w-4 h-4" />
-                  Dashboard
-                </Link>
-                <span className="text-bone-400">/</span>
-                <span className="font-mono text-xs font-bold text-steel-400 uppercase tracking-widest bg-steel-400/10 px-2 py-0.5 rounded-sm border border-steel-400/20">
-                  SCREEN_03
-                </span>
-              </div>
-              <h1 className="font-mono font-black text-3xl sm:text-4xl md:text-5xl text-ink-900 tracking-tight leading-none">
-                GEO CITATION TEST
-              </h1>
-              <p className="font-sans text-sm text-bone-700">
-                AI Answer Engine Lens — Source fidelity &amp; hallucination detection
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="font-sans text-sm text-bone-700">TARGET:</span>
-              <code className="font-mono text-sm bg-bone-300/40 px-3 py-1.5 rounded-sm border border-bone-300 text-ink-900 font-semibold">
-                /products/digital-micrometer-caliper
-              </code>
-            </div>
-          </div>
-
-          {/* ── 5 COLS / 7 COLS SPLIT ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* ── LEFT PANEL (5 COLS): GEO SCORE & NEURAL SPECS ── */}
-            <div className="lg:col-span-5 flex flex-col gap-5">
-              {/* GEO Score Bento Card */}
-              <div className="bg-bone-100 border border-bone-300 rounded-md p-5 flex flex-col justify-between gap-4 shadow-card">
-                <div className="flex items-center justify-between border-b border-bone-300 pb-3">
-                  <span className="font-mono text-xs font-bold text-ink-900 uppercase tracking-wider">
-                    GEO CITATION-READINESS SCORE
-                  </span>
-                  <span className="font-mono text-xs font-bold text-ember-600 bg-ember-600/10 px-2.5 py-1 rounded-sm border border-ember-600/30">
-                    −27 DEGRADED
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-3 my-2">
-                  <span className="font-display font-black tabular-nums text-ink-900" style={{ fontSize: "clamp(3rem, 5vw, 4rem)" }}>
-                    61
-                  </span>
-                  <span className="font-mono text-sm text-bone-700 font-bold">/ 100</span>
-                  <div className="ml-auto text-right font-mono text-xs">
-                    <span className="text-bone-700 block text-xs">PREVIOUS DEPLOY:</span>
-                    <span className="line-through text-bone-700 font-bold">88</span>
-                    <span className="text-ember-600 font-bold ml-1">→ 61 (−27)</span>
-                  </div>
-                </div>
-
-                <p className="font-sans text-sm text-bone-700 leading-relaxed">
-                  Generative Engine Optimization (GEO) index measuring how accurately LLMs cite and ground structured product specifications.
-                </p>
-              </div>
-
-              {/* Neural Engine Specs Bento Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-bone-100 border border-bone-300 rounded-sm p-4 flex flex-col gap-1.5 font-mono">
-                  <div className="flex items-center gap-1.5 text-xs sm:text-sm text-bone-700 uppercase font-bold">
-                    <Cpu className="w-4 h-4 text-steel-400" />
-                    <span>TEST MODEL</span>
-                  </div>
-                  <span className="text-sm font-bold text-ink-900 truncate">
-                    Llama 3.3 70B Instruct
-                  </span>
-                  <span className="text-xs text-bone-700 font-medium">OpenRouter Omni-v2.1</span>
-                </div>
-
-                <div className="bg-bone-100 border border-bone-300 rounded-sm p-4 flex flex-col gap-1.5 font-mono">
-                  <div className="flex items-center gap-1.5 text-xs sm:text-sm text-bone-700 uppercase font-bold">
-                    <Layers className="w-4 h-4 text-steel-400" />
-                    <span>EMBEDDING DEPTH</span>
-                  </div>
-                  <span className="text-sm font-bold text-ink-900">
-                    4,096 Dimensions
-                  </span>
-                  <span className="text-xs text-bone-700 font-medium">Cosine Sim: 0.742</span>
-                </div>
-
-                <div className="bg-bone-100 border border-bone-300 rounded-sm p-4 flex flex-col gap-1.5 font-mono">
-                  <div className="flex items-center gap-1.5 text-xs sm:text-sm text-bone-700 uppercase font-bold">
-                    <Database className="w-4 h-4 text-steel-400" />
-                    <span>STRUCTURED ENTITIES</span>
-                  </div>
-                  <span className="text-sm font-bold text-ember-600">
-                    2 of 5 Grounded
-                  </span>
-                  <span className="text-xs text-bone-700 font-medium">3 Stripped by Regression</span>
-                </div>
-
-                <div className="bg-bone-100 border border-bone-300 rounded-sm p-4 flex flex-col gap-1.5 font-mono">
-                  <div className="flex items-center gap-1.5 text-xs sm:text-sm text-bone-700 uppercase font-bold">
-                    <Sparkles className="w-4 h-4 text-steel-400" />
-                    <span>HALLUCINATION RISK</span>
-                  </div>
-                  <span className="text-sm font-bold text-ember-600 uppercase">
-                    HIGH RISK
-                  </span>
-                  <span className="text-xs text-bone-700 font-medium">Omitted Metadata</span>
-                </div>
-              </div>
-
-              {/* Target Facts Checklist */}
-              <div className="bg-bone-100 border border-bone-300 rounded-sm p-4 flex flex-col gap-2.5 font-mono text-xs sm:text-sm">
-                <span className="font-bold text-bone-700 uppercase tracking-wider text-xs sm:text-sm">
-                  TARGET FACT EXTRACTION AUDIT
-                </span>
-                <div className="flex flex-col gap-2">
-                  {groundedFacts.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-bone-300/50">
-                      <span className={clsx(f.grounded ? "text-ink-900 font-semibold" : "text-bone-700 line-through")}>
-                        {f.fact}
-                      </span>
-                      <span
-                        className={clsx(
-                          "px-2 py-0.5 rounded-sm text-xs font-bold uppercase",
-                          f.grounded
-                            ? "bg-patina-400/20 text-patina-600 border border-patina-400/30"
-                            : "bg-ember-600/10 text-ember-600 border border-ember-600/30"
-                        )}
-                      >
-                        {f.grounded ? "GROUNDED" : "STRIPPED"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT PANEL (7 COLS): AI ANSWER ENGINE CONVERSATION LENS ── */}
-            <div className="lg:col-span-7 bg-bone-100 border border-bone-300 rounded-sm p-5 sm:p-6 flex flex-col justify-between gap-5">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-bone-300 pb-3">
-                <div className="flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-steel-400" />
-                  <span className="font-mono text-sm font-bold text-ink-900 uppercase tracking-wider">
-                    AI ANSWER ENGINE LENS SIMULATION
-                  </span>
-                </div>
-                <button
-                  onClick={handleReRunTest}
-                  disabled={isTesting}
-                  className="flex items-center gap-2 px-3.5 py-1.5 min-h-[38px] bg-ember-600 hover:bg-ember-500 text-bone-100 rounded-sm font-mono text-xs sm:text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-cta"
-                >
-                  <RefreshCw className={clsx("w-3.5 h-3.5 text-bone-100", isTesting && "animate-spin")} />
-                  <span>{isTesting ? "QUERYING LLM..." : "RE-TEST SIGNAL"}</span>
-                </button>
-              </div>
-
-              {/* Conversation Bubble Interface */}
-              <div className="flex flex-col gap-4">
-                {/* User Query Bubble */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-sm bg-bone-300 text-ink-900 flex items-center justify-center font-mono font-bold text-sm shrink-0">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <div className="bg-bone-300/40 border border-bone-300 rounded-sm p-4 max-w-[85%] font-sans text-sm text-ink-900 leading-relaxed">
-                    <span className="font-mono text-xs font-bold text-bone-700 block mb-1">
-                      USER QUERY PROMPT:
-                    </span>
-                    &ldquo;What are the exact calibration tolerances, MSRP pricing, and housing specifications of the Acme Digital Micrometer Caliper?&rdquo;
-                  </div>
-                </div>
-
-                {/* AI Model Response Bubble */}
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-sm bg-ember-600 text-bone-100 flex items-center justify-center font-mono font-bold text-sm shrink-0 shadow-cta">
-                    <Bot className="w-4 h-4" />
-                  </div>
-                  <div className="bg-bone-300/30 border border-bone-300 rounded-sm p-4 max-w-[90%] font-mono text-sm text-ink-900 flex flex-col gap-3">
-                    <div className="flex items-center justify-between text-bone-700 text-xs sm:text-sm font-medium">
-                      <span>AI SYNTHESIS (Llama 3.3 70B):</span>
-                      <span className="text-ember-600 font-bold">Citation Confidence: 40%</span>
-                    </div>
-
-                    <p className="leading-relaxed bg-bone-100 p-3 rounded-sm border border-bone-300 text-ink-900 text-sm">
-                      {modelAnswer}
-                    </p>
-
-                    {/* Inline Hallucination Alert */}
-                    <div className="flex items-center gap-2.5 bg-ember-600/10 border border-ember-600/40 p-3 rounded-sm text-ember-600 text-xs sm:text-sm font-bold">
-                      <AlertOctagon className="w-4 h-4 shrink-0" />
-                      <span>HALLUCINATION ALERT: Engine failed to extract structured Offer pricing entity.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── 5-SEGMENT SOURCE FIDELITY INDEX METER ── */}
-              <div className="border-t border-bone-300 pt-4 flex flex-col gap-2.5 font-mono">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-bold text-ink-900 uppercase">
-                    SOURCE FIDELITY INDEX
-                  </span>
-                  <span className="font-bold text-ember-600">
-                    {citationScore} / {totalSegments} SEGMENTS GROUNDED
-                  </span>
-                </div>
-
-                {/* 5-Segment Bar (Filled: patina-400, Empty: bone-300) */}
-                <div className="grid grid-cols-5 gap-2 h-4">
-                  {Array.from({ length: totalSegments }).map((_, idx) => {
-                    const isFilled = idx < citationScore;
-                    return (
-                      <div
-                        key={idx}
-                        className={clsx(
-                          "h-full rounded-sm border transition-all duration-300",
-                          isFilled
-                            ? "bg-patina-400 border-patina-600"
-                            : "bg-bone-300 border-bone-300 opacity-60"
-                        )}
-                      />
-                    );
-                  })}
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-bone-700 pt-1">
-                  <span>Level 1: Unverified</span>
-                  <span>Level 3: Partial</span>
-                  <span>Level 5: Full Grounding</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
+    <main className="max-w-5xl mx-auto p-8 space-y-6">
+      <h1 className="font-mono text-3xl">GEO and citation grounding</h1>
+      <p>
+        {project?.repo || "Connect a project to test its deployed content."}
+      </p>
+      <p>
+        Latest deployment GEO score:{" "}
+        {score === null ? "Not measured" : `${score}/100`}
+      </p>
+      <form
+        className="grid gap-4 border p-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run();
+        }}
+      >
+        <label>
+          Page URL
+          <input
+            required
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="border p-2 w-full"
+          />
+        </label>
+        <label>
+          Question
+          <input
+            required
+            maxLength={500}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="border p-2 w-full"
+          />
+        </label>
+        <label>
+          Expected facts (optional, one per line)
+          <textarea
+            value={facts}
+            onChange={(e) => setFacts(e.target.value)}
+            className="border p-2 w-full"
+          />
+        </label>
+        <button
+          disabled={!project || busy}
+          className="bg-ink-900 text-bone-100 p-3 disabled:opacity-50"
+        >
+          {busy ? "Testing..." : "Run citation test"}
+        </button>
+      </form>
+      <p role="status">{error}</p>
+      {result ? (
+        <section className="border p-5 space-y-4">
+          <h2 className="text-xl">Grounding: {result.score}/5</h2>
+          <p>Model: {result.modelUsed}</p>
+          <p className="whitespace-pre-wrap">{result.modelAnswer}</p>
+          <ul>
+            {result.groundedFacts.map((fact, i) => (
+              <li key={i}>
+                {fact.isGrounded
+                  ? "Supported in source and answer"
+                  : "Not supported in both"}
+                : {fact.fact}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <p>No citation result for this project yet.</p>
+      )}
+      <p className="text-sm text-bone-700">
+        Grounding checks exact normalized phrases against the fetched page and
+        model answer. This does not measure the probability that a search engine
+        will cite your page.
+      </p>
+    </main>
   );
 }

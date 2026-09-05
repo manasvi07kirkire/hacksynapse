@@ -47,11 +47,16 @@ export function validateNoDuplicateH1(h1: string[]): OnPageCheck {
   return {
     name: "No duplicate H1",
     passed,
-    detail: passed ? `${h1.length} H1 element(s)` : `${h1.length} H1 elements found — expected at most 1`,
+    detail: passed
+      ? `${h1.length} H1 element(s)`
+      : `${h1.length} H1 elements found — expected at most 1`,
   };
 }
 
-export function validateKeywordDensity(bodyText: string, targetKeywords: string[]): OnPageCheck {
+export function validateKeywordDensity(
+  bodyText: string,
+  targetKeywords: string[],
+): OnPageCheck {
   const words = bodyText.split(/\s+/).filter(Boolean);
   const wordCount = words.length || 1;
   const bodyLower = bodyText.toLowerCase();
@@ -79,7 +84,10 @@ export function validateKeywordDensity(bodyText: string, targetKeywords: string[
   };
 }
 
-export function runOnPageValidation(preview: PatchedPagePreview, targetKeywords: string[]): OnPageValidationResult {
+export function runOnPageValidation(
+  preview: PatchedPagePreview,
+  targetKeywords: string[],
+): OnPageValidationResult {
   const checks = [
     validateTitleLength(preview.title),
     validateMetaLength(preview.metaDescription),

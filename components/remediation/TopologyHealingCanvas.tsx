@@ -45,13 +45,23 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-bone-300 pb-3">
         <div className="flex items-center gap-3">
           <Network className="w-5 h-5 text-ink-900" />
-          <span className="font-mono text-sm font-black text-ink-900 uppercase tracking-wider">{title}</span>
+          <span className="font-mono text-sm font-black text-ink-900 uppercase tracking-wider">
+            {title}
+          </span>
         </div>
         {stats && (
           <div className="flex items-center gap-4 font-mono text-xs text-bone-700">
-            <span>Depth: <strong className="text-ink-900">{stats.depth}</strong></span>
-            <span>200 OK: <strong className="text-patina-600">{stats.okRate}%</strong></span>
-            <span>Orphans: <strong className="text-ember-600">{stats.orphans}</strong></span>
+            <span>
+              Depth: <strong className="text-ink-900">{stats.depth}</strong>
+            </span>
+            <span>
+              200 OK:{" "}
+              <strong className="text-patina-600">{stats.okRate}%</strong>
+            </span>
+            <span>
+              Orphans:{" "}
+              <strong className="text-ember-600">{stats.orphans}</strong>
+            </span>
           </div>
         )}
       </div>
@@ -65,8 +75,18 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
         >
           {/* Grid Background */}
           <defs>
-            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2B241D" strokeWidth="0.5" />
+            <pattern
+              id="grid"
+              width="20"
+              height="20"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 20 0 L 0 0 0 20"
+                fill="none"
+                stroke="#2B241D"
+                strokeWidth="0.5"
+              />
             </pattern>
           </defs>
           <rect width="400" height="280" fill="url(#grid)" />
@@ -79,8 +99,10 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
             return (
               <line
                 key={i}
-                x1={from.x} y1={from.y}
-                x2={to.x} y2={to.y}
+                x1={from.x}
+                y1={from.y}
+                x2={to.x}
+                y2={to.y}
                 stroke={edge.active ? "#4FA695" : "#383027"}
                 strokeWidth={edge.active ? 1.5 : 1}
                 className={edge.active ? "line-active" : ""}
@@ -96,17 +118,23 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
             const h = isRoot ? 28 : 24;
 
             return (
-              <g key={node.id} className={node.type === "root" ? "node-active" : ""}>
+              <g
+                key={node.id}
+                className={node.type === "root" ? "node-active" : ""}
+              >
                 <rect
-                  x={node.x - w / 2} y={node.y - h / 2}
-                  width={w} height={h}
+                  x={node.x - w / 2}
+                  y={node.y - h / 2}
+                  width={w}
+                  height={h}
                   rx={2}
                   fill={colors.fill}
                   stroke={colors.border}
                   strokeWidth={isRoot ? 1.5 : 1}
                 />
                 <text
-                  x={node.x} y={node.y + 1}
+                  x={node.x}
+                  y={node.y + 1}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill={colors.text}
@@ -132,7 +160,9 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
         ].map((item) => (
           <div key={item.type} className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-sm ${item.color}`} />
-            <span className="font-sans text-sm text-bone-700">{item.label}</span>
+            <span className="font-sans text-sm text-bone-700">
+              {item.label}
+            </span>
           </div>
         ))}
       </div>

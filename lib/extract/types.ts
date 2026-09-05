@@ -23,6 +23,8 @@ export interface ExtractedPageData {
     type?: string;
   };
   textSample: string;
+  schemaErrors?: string[];
+  canonicalErrors?: string[];
 }
 
 export interface SchemaValidationResult {

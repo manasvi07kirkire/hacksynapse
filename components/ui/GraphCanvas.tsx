@@ -20,13 +20,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   onSelectNode,
   className,
 }) => {
-  const [activeFilter, setActiveFilter] = useState<"ALL" | "PAGES" | "TEMPLATES" | "REGRESSIONS">("ALL");
+  const [activeFilter, setActiveFilter] = useState<
+    "ALL" | "PAGES" | "TEMPLATES" | "REGRESSIONS"
+  >("ALL");
   const [hoveredNode, setHoveredNode] = useState<GraphNodeData | null>(null);
 
   const filteredNodes = nodes.filter((n) => {
     if (activeFilter === "PAGES") return n.type === "page";
-    if (activeFilter === "TEMPLATES") return n.type === "template" || n.type === "schema";
-    if (activeFilter === "REGRESSIONS") return n.health === "REGRESSION" || n.health === "DEGRADED";
+    if (activeFilter === "TEMPLATES")
+      return n.type === "template" || n.type === "schema";
+    if (activeFilter === "REGRESSIONS")
+      return n.health === "REGRESSION" || n.health === "DEGRADED";
     return true;
   });
 
@@ -37,7 +41,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     <div
       className={clsx(
         "bg-ink-800 border border-ink-700 rounded-sm p-4 sm:p-5 flex flex-col gap-4 relative overflow-hidden",
-        className
+        className,
       )}
     >
       {/* Canvas Header */}
@@ -60,7 +64,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               "font-mono text-xs sm:text-sm px-3 py-1.5 rounded-sm transition-all shrink-0 font-bold uppercase min-h-[36px]",
               activeFilter === "ALL"
                 ? "bg-ink-750 text-bone-100 border border-ink-700 shadow-sm"
-                : "text-bone-400 hover:text-bone-200"
+                : "text-bone-400 hover:text-bone-200",
             )}
           >
             ALL ({nodes.length})
@@ -71,7 +75,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               "font-mono text-xs sm:text-sm px-3 py-1.5 rounded-sm transition-all shrink-0 font-bold uppercase min-h-[36px]",
               activeFilter === "PAGES"
                 ? "bg-ink-750 text-bone-100 border border-ink-700 shadow-sm"
-                : "text-bone-400 hover:text-bone-200"
+                : "text-bone-400 hover:text-bone-200",
             )}
           >
             PAGES ({pageCount})
@@ -82,7 +86,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               "font-mono text-xs sm:text-sm px-3 py-1.5 rounded-sm transition-all shrink-0 font-bold uppercase min-h-[36px]",
               activeFilter === "TEMPLATES"
                 ? "bg-ink-750 text-bone-100 border border-ink-700 shadow-sm"
-                : "text-bone-400 hover:text-bone-200"
+                : "text-bone-400 hover:text-bone-200",
             )}
           >
             TEMPLATES / SCHEMAS
@@ -93,7 +97,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
               "font-mono text-xs sm:text-sm px-3 py-1.5 rounded-sm transition-all shrink-0 font-bold uppercase min-h-[36px]",
               activeFilter === "REGRESSIONS"
                 ? "bg-ember-tint text-ember-400 border border-ember-600/40 shadow-sm"
-                : "text-bone-400 hover:text-bone-200"
+                : "text-bone-400 hover:text-bone-200",
             )}
           >
             IMPACTED ({regressedCount})
@@ -108,7 +112,8 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           {filteredNodes.map((node) => {
             const isRegressed = node.health === "REGRESSION";
             const isDegraded = node.health === "DEGRADED";
-            const isRootCauseEmitter = node.key === "ProductPage.tsx" && isRegressed;
+            const isRootCauseEmitter =
+              node.key === "ProductPage.tsx" && isRegressed;
             const isSelected = node.id === selectedNodeId;
 
             // Discrete Status Atom per design system
@@ -138,7 +143,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     ? "border-ember-600/80 bg-ember-tint ring-1 ring-ember-600/40"
                     : isSelected
                       ? "border-line-500 bg-ink-750 ring-1 ring-line-500"
-                      : "border-ink-700 hover:border-line-500 hover:bg-ink-750"
+                      : "border-ink-700 hover:border-line-500 hover:bg-ink-750",
                 )}
               >
                 {/* Node Title & Type Chip */}
@@ -158,7 +163,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
                 {/* Status Atom */}
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-ink-700/80">
-                  <span className={clsx("flex items-center gap-1.5 font-bold", statusClass)}>
+                  <span
+                    className={clsx(
+                      "flex items-center gap-1.5 font-bold",
+                      statusClass,
+                    )}
+                  >
                     <span className="text-xs leading-none">{statusSymbol}</span>
                     <span>{statusLabel}</span>
                   </span>
@@ -169,7 +179,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     </span>
                   ) : (
                     <span className="text-bone-400 text-xs">
-                      {node.type === "template" ? "Emitter" : node.type === "schema" ? "Entity" : "Route"}
+                      {node.type === "template"
+                        ? "Emitter"
+                        : node.type === "schema"
+                          ? "Entity"
+                          : "Route"}
                     </span>
                   )}
                 </div>
@@ -184,17 +198,28 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             <Info className="w-4 h-4 text-steel-400 shrink-0" />
             {hoveredNode ? (
               <span className="truncate">
-                Inspecting: <strong className="text-bone-100">{hoveredNode.url}</strong> ({hoveredNode.health}) · Template: {hoveredNode.attrs?.templateName || "None"}
+                Inspecting:{" "}
+                <strong className="text-bone-100">{hoveredNode.url}</strong> (
+                {hoveredNode.health}) · Template:{" "}
+                {hoveredNode.attrs?.templateName || "None"}
               </span>
             ) : (
-              <span>Hover or click any node to trace impact propagation topology</span>
+              <span>
+                Hover or click any node to trace impact propagation topology
+              </span>
             )}
           </div>
 
           <div className="flex items-center gap-3 text-xs font-bold shrink-0">
-            <span className="flex items-center gap-1.5 text-patina-400"><span>■</span> Pass</span>
-            <span className="flex items-center gap-1.5 text-marigold-400"><span>▲</span> Degraded</span>
-            <span className="flex items-center gap-1.5 text-ember-400"><span>●</span> Regression</span>
+            <span className="flex items-center gap-1.5 text-patina-400">
+              <span>■</span> Pass
+            </span>
+            <span className="flex items-center gap-1.5 text-marigold-400">
+              <span>▲</span> Degraded
+            </span>
+            <span className="flex items-center gap-1.5 text-ember-400">
+              <span>●</span> Regression
+            </span>
           </div>
         </div>
       </div>

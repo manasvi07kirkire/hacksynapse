@@ -4,6 +4,7 @@ import { LlmsTxtData } from "./types";
  * Parses and validates llms.txt standard files according to https://llmstxt.org/
  */
 export function parseLlmsTxt(content: string): LlmsTxtData {
+  if (content.length > 65536) throw new Error("llms.txt exceeds budget");
   if (!content || !content.trim()) {
     return {
       exists: false,
@@ -17,11 +18,17 @@ export function parseLlmsTxt(content: string): LlmsTxtData {
   const lines = content.split(/\r?\n/);
   let title: string | undefined;
   let summary: string | undefined;
-  const sections: { title: string; links: { title: string; url: string; description?: string }[] }[] = [];
+  const sections: {
+    title: string;
+    links: { title: string; url: string; description?: string }[];
+  }[] = [];
   const referencedPaths: string[] = [];
   const errors: string[] = [];
 
-  let currentSection = { title: "General", links: [] as any[] };
+  let currentSection: LlmsTxtData["sections"][number] = {
+    title: "General",
+    links: [],
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -54,6 +61,10 @@ export function parseLlmsTxt(content: string): LlmsTxtData {
       const linkTitle = linkMatch[1];
       const linkUrl = linkMatch[2];
       const linkDesc = linkMatch[3];
+      if (!/^https?:\/\//i.test(linkUrl) && !/^\/(?!\/)/.test(linkUrl)) {
+        errors.push("Invalid link URL");
+        continue;
+      }
 
       currentSection.links.push({
         title: linkTitle,
@@ -72,6 +83,7 @@ export function parseLlmsTxt(content: string): LlmsTxtData {
   if (!title) {
     errors.push("Missing H1 title in llms.txt");
   }
+  if (!sections.length) errors.push("No link sections in llms.txt");
 
   return {
     exists: true,

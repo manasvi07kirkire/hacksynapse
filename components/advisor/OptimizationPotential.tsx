@@ -20,7 +20,7 @@ export const OptimizationPotential: React.FC<OptimizationPotentialProps> = ({
       <span
         className={clsx(
           "flex items-center gap-1.5 font-bold tabular-nums",
-          hasSuggestions ? "text-steel-400" : "text-bone-500"
+          hasSuggestions ? "text-steel-400" : "text-bone-500",
         )}
       >
         <span>{hasSuggestions ? "◆" : "○"}</span>

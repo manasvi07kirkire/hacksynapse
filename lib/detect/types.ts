@@ -6,6 +6,10 @@ export type FindingType =
   | "SCHEMA_REMOVED"
   | "SCHEMA_INVALID"
   | "ORPHAN_PAGE_CREATED"
+  | "ORPHAN_PAGE"
+  | "TITLE_MISSING"
+  | "META_DESCRIPTION_MISSING"
+  | "DUPLICATE_TITLE"
   | "LLMSTXT_INVALID"
   | "SITEMAP_INCONSISTENCY";
 
@@ -25,14 +29,14 @@ export interface FindingData {
     firstBadDeploy: string;
     template: string;
     sampleUrls: string[];
-    details?: any;
+    details?: unknown;
   };
   rootCause: {
     file: string;
     line: number;
     component: string;
     snippet?: string;
-  };
+  } | null;
   status: "OPEN" | "REMEDIATED" | "ACKNOWLEDGED";
 }
 

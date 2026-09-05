@@ -1,6 +1,9 @@
 import React from "react";
 import clsx from "clsx";
-import { classifyRemediationTier, RemediationTier } from "@/lib/remediate/tier-manager";
+import {
+  classifyRemediationTier,
+  RemediationTier,
+} from "@/lib/remediate/tier-manager";
 
 interface TierBadgeProps {
   tier?: RemediationTier;
@@ -18,17 +21,26 @@ export const TierBadge: React.FC<TierBadgeProps> = ({
   const classification = findingType
     ? classifyRemediationTier(findingType)
     : {
-      tier,
-      label:
-        tier === "TIER_A" ? "AUTO-FIX" : tier === "TIER_B" ? "DRAFT PR" : "APPROVAL ONLY",
-      colorToken: tier === "TIER_A" ? "patina" : tier === "TIER_B" ? "marigold" : "ember",
-      description:
-        tier === "TIER_A"
-          ? "Declarative template-safe fix"
-          : tier === "TIER_B"
-            ? "Structural draft PR"
-            : "Requires manual human approval",
-    };
+        tier,
+        label:
+          tier === "TIER_A"
+            ? "AUTO-FIX"
+            : tier === "TIER_B"
+              ? "DRAFT PR"
+              : "APPROVAL ONLY",
+        colorToken:
+          tier === "TIER_A"
+            ? "patina"
+            : tier === "TIER_B"
+              ? "marigold"
+              : "ember",
+        description:
+          tier === "TIER_A"
+            ? "Declarative template-safe fix"
+            : tier === "TIER_B"
+              ? "Structural draft PR"
+              : "Requires manual human approval",
+      };
 
   const isPatina = classification.colorToken === "patina";
   const isMarigold = classification.colorToken === "marigold";
@@ -47,7 +59,7 @@ export const TierBadge: React.FC<TierBadgeProps> = ({
       <span
         className={clsx(
           "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border font-mono text-xs font-bold uppercase tracking-wider",
-          colorStyles
+          colorStyles,
         )}
       >
         <span className="text-xs leading-none" aria-hidden="true">

@@ -1,5 +1,9 @@
 import { AdvisorPageContent, Suggestion } from "./types";
-import { OnPageValidationResult, PatchedPagePreview, runOnPageValidation } from "./validate";
+import {
+  OnPageValidationResult,
+  PatchedPagePreview,
+  runOnPageValidation,
+} from "./validate";
 
 export interface ApplyResult {
   preview: PatchedPagePreview;
@@ -7,7 +11,10 @@ export interface ApplyResult {
   validation: OnPageValidationResult;
 }
 
-function buildPatchedPreview(content: AdvisorPageContent, approved: Suggestion[]): PatchedPagePreview {
+function buildPatchedPreview(
+  content: AdvisorPageContent,
+  approved: Suggestion[],
+): PatchedPagePreview {
   let title = content.title || "";
   let metaDescription = content.metaDescription || "";
   let h1 = [...content.headings.h1];
@@ -30,7 +37,9 @@ function buildPatchedPreview(content: AdvisorPageContent, approved: Suggestion[]
       case "add-keyword":
       case "remove-keyword":
       case "internal-link":
-        bodyText = s.before ? bodyText.replace(s.before, s.after) : `${bodyText} ${s.after}`;
+        bodyText = s.before
+          ? bodyText.replace(s.before, s.after)
+          : `${bodyText} ${s.after}`;
         break;
     }
   }
@@ -41,7 +50,7 @@ function buildPatchedPreview(content: AdvisorPageContent, approved: Suggestion[]
 function buildDiff(pageUrl: string, approved: Suggestion[]): string {
   const header = `--- a: ${pageUrl}\n+++ b: ${pageUrl}`;
   const hunks = approved.map(
-    (s) => `@@ ${s.location} @@\n- ${s.before || "(none)"}\n+ ${s.after}`
+    (s) => `@@ ${s.location} @@\n- ${s.before || "(none)"}\n+ ${s.after}`,
   );
   return [header, ...hunks].join("\n\n");
 }
@@ -50,7 +59,7 @@ export function applyApprovedSuggestions(
   pageUrl: string,
   content: AdvisorPageContent,
   targetKeywords: string[],
-  approved: Suggestion[]
+  approved: Suggestion[],
 ): ApplyResult {
   const preview = buildPatchedPreview(content, approved);
   const diff = buildDiff(pageUrl, approved);

@@ -3,169 +3,314 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Project {
-  id            String       @id @default(cuid())
-  repo          String       // e.g. "acme/web-store"
-  siteUrl       String       // e.g. "https://staging.acme.com"
-  routeManifest String       // JSON string of routes array
+  id            String         @id @default(cuid())
+  repo          String         @unique
+  defaultBranch String         @default("main")
+  enabled       Boolean        @default(true)
+  deployCounter Int            @default(0)
+  sourceMap     String         @default("{}")
+  leaseToken    String?
+  leaseUntil    DateTime?
+  siteUrl       String // e.g. "https://staging.acme.com"
+  routeManifest String // JSON string of routes array
   installId     String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   deployments   Deployment[]
+  scans         SeoScan[]
+  citations     CitationTest[]
+  jobs          AnalysisJob[]
+  operations    Operation[]
 }
 
 model Deployment {
-  id            String          @id @default(cuid())
-  projectId     String
-  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sha           String          // commit sha (e.g. "c9a41f8")
-  deployNumber  Int             // e.g. 183, 184, 185
-  ref           String          // e.g. "refs/heads/main"
-  commitMsg     String          // e.g. "fix: refactor product layout and metadata generator"
-  author        String          // e.g. "sarah-dev"
-  status        String          // "HEALTHY", "REGRESSION", "REMEDIATED", "RUNNING"
-  createdAt     DateTime        @default(now())
-  
+  id               String        @id @default(cuid())
+  projectId        String
+  project          Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sha              String // commit sha (e.g. "c9a41f8")
+  deployNumber     Int // e.g. 183, 184, 185
+  ref              String // e.g. "refs/heads/main"
+  commitMsg        String // e.g. "fix: refactor product layout and metadata generator"
+  author           String // e.g. "sarah-dev"
+  status           String // "HEALTHY", "REGRESSION", "REMEDIATED", "RUNNING"
+  createdAt        DateTime      @default(now())
+  completedAt      DateTime?
+  startedAt        DateTime?
+  errorCode        String?
+  analysisVersion  String        @default("v1")
+  revisionVerified Boolean       @default(false)
+  degradation      String        @default("[]")
+  jobs             AnalysisJob[]
+
   snapshots     GraphSnapshot[]
   findings      Finding[]
   score         Score?
+  recoveries    Recovery[]
+  citationTests CitationTest[]
+
+  @@unique([projectId, deployNumber])
+  @@unique([projectId, sha, analysisVersion])
+  @@index([projectId, status, deployNumber])
 }
 
 model GraphSnapshot {
   id           String     @id @default(cuid())
-  deploymentId String
+  deploymentId String     @unique
+  version      String     @default("graph-v1")
+  complete     Boolean    @default(false)
+  data         String     @default("{}")
   deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
-  
-  nodes        Node[]
-  edges        Edge[]
+
+  nodes Node[]
+  edges Edge[]
 }
 
 model Node {
-  id          String        @id @default(cuid())
-  snapshotId  String
-  snapshot    GraphSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  type        String        // "page", "template", "schema", "signal"
-  url         String        // e.g. "/products/machined-caliper"
-  key         String        // identifier key
-  title       String?
-  health      String        // "PASS" (patina), "DEGRADED" (marigold), "REGRESSION" (ember)
-  attrs       String        // JSON serialized properties (meta tags, schema types, status)
-  
-  fromEdges   Edge[]        @relation("FromEdges")
-  toEdges     Edge[]        @relation("ToEdges")
+  id         String        @id @default(cuid())
+  snapshotId String
+  snapshot   GraphSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  type       String // "page", "template", "schema", "signal"
+  url        String // e.g. "/products/machined-caliper"
+  key        String // identifier key
+  title      String?
+  health     String // "PASS" (patina), "DEGRADED" (marigold), "REGRESSION" (ember)
+  attrs      String // JSON serialized properties (meta tags, schema types, status)
+
+  fromEdges     Edge[]         @relation("FromEdges")
+  toEdges       Edge[]         @relation("ToEdges")
   citationTests CitationTest[]
+
+  @@unique([snapshotId, key])
+  @@unique([snapshotId, id])
 }
 
 model Edge {
-  id          String        @id @default(cuid())
-  snapshotId  String
-  snapshot    GraphSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
-  fromNodeId  String
-  toNodeId    String
-  fromNode    Node          @relation("FromEdges", fields: [fromNodeId], references: [id], onDelete: Cascade)
-  toNode      Node          @relation("ToEdges", fields: [toNodeId], references: [id], onDelete: Cascade)
-  kind        String        // "links_to", "canonical_to", "renders_from", "has_schema"
+  id         String        @id @default(cuid())
+  snapshotId String
+  snapshot   GraphSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  fromNodeId String
+  toNodeId   String
+  fromNode   Node          @relation("FromEdges", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode     Node          @relation("ToEdges", fields: [toNodeId], references: [id], onDelete: Cascade)
+  kind       String // "links_to", "canonical_to", "renders_from", "has_schema"
+
+  @@unique([snapshotId, fromNodeId, toNodeId, kind])
 }
 
 model Finding {
-  id            String        @id @default(cuid())
-  deploymentId  String
-  deployment    Deployment    @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
-  type          String        // "CANONICAL_STRIPPED", "NOINDEX_FLIPPED", "SCHEMA_REMOVED", "ORPHAN_PAGE"
-  severity      String        // "CRITICAL", "HIGH", "MEDIUM", "LOW"
-  confidence    Int           // 0 to 100
-  lens          String        // "search", "ai-answer", "both"
-  title         String
-  description   String        // LLM narrated explanation (grounded strictly in evidence)
-  evidence      String        // JSON { pagesAffected: 127, firstBadDeploy: "#184", template: "ProductPage.tsx" }
-  rootCause     String        // JSON { file: "src/app/products/[slug]/page.tsx", line: 184, component: "ProductMetadata" }
-  status        String        // "OPEN", "REMEDIATED", "ACKNOWLEDGED"
-  createdAt     DateTime      @default(now())
-  
-  remediations  Remediation[]
+  id           String     @id @default(cuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  type         String // "CANONICAL_STRIPPED", "NOINDEX_FLIPPED", "SCHEMA_REMOVED", "ORPHAN_PAGE"
+  severity     String // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+  confidence   Int // 0 to 100
+  lens         String // "search", "ai-answer", "both"
+  title        String
+  description  String // LLM narrated explanation (grounded strictly in evidence)
+  evidence     String // JSON { pagesAffected: 127, firstBadDeploy: "#184", template: "ProductPage.tsx" }
+  rootCause    String // JSON { file: "src/app/products/[slug]/page.tsx", line: 184, component: "ProductMetadata" }
+  status       String // "OPEN", "REMEDIATED", "ACKNOWLEDGED"
+  createdAt    DateTime   @default(now())
+
+  remediations Remediation[]
+  ruleVersion  String        @default("rules-v1")
+  recovery     Recovery?
+
+  @@unique([deploymentId, type])
 }
 
 model Remediation {
   id               String    @id @default(cuid())
   findingId        String
   finding          Finding   @relation(fields: [findingId], references: [id], onDelete: Cascade)
-  tier             String    // "TIER_A" (Auto-fix), "TIER_B" (Draft PR), "TIER_C" (Approval)
-  action           String    // e.g. "Restore canonical generator in ProductMetadata"
-  patchDiff        String    // Unified diff string
+  tier             String // "TIER_A" (Auto-fix), "TIER_B" (Draft PR), "TIER_C" (Approval)
+  action           String // e.g. "Restore canonical generator in ProductMetadata"
+  patchDiff        String // Unified diff string
   prUrl            String?
   prNumber         Int?
-  validationResult String    // JSON { staticCheck: true, ruleRecheck: true, buildable: true }
-  status           String    // "READY", "APPLIED", "DRAFT_OPENED", "PENDING_APPROVAL"
+  validationResult String // JSON { staticCheck: true, ruleRecheck: true, buildable: true }
+  status           String // "READY", "APPLIED", "DRAFT_OPENED", "PENDING_APPROVAL"
   createdAt        DateTime  @default(now())
+  operationKey     String?   @unique
+  baseSha          String?
+  approvalActor    String?
+  approvedAt       DateTime?
 }
 
 model Score {
   id           String     @id @default(cuid())
   deploymentId String     @unique
   deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
-  searchHealth Int        // 0 to 100
-  geoScore     Int        // 0 to 100
-  deltaSearch  Int        // e.g. -25
-  deltaGeo     Int        // e.g. -27
-  breakdown    String     // JSON details on factors & weights
+  searchHealth Int // 0 to 100
+  geoScore     Int // 0 to 100
+  deltaSearch  Int // e.g. -25
+  deltaGeo     Int // e.g. -27
+  breakdown    String // JSON details on factors & weights
   createdAt    DateTime   @default(now())
+  version      String     @default("score-v1")
+  inputs       String     @default("{}")
 }
 
 model CitationTest {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   nodeId        String?
-  node          Node?     @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+  node          Node?       @relation(fields: [nodeId], references: [id], onDelete: SetNull)
   url           String
   query         String
   modelAnswer   String
   modelUsed     String
-  groundedFacts String    // JSON array of target facts & match status
-  score         Int       // 1 to 5 segments
+  groundedFacts String // JSON array of target facts & match status
+  score         Int // 1 to 5 segments
   totalFacts    Int
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime    @default(now())
+  projectId     String?
+  project       Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version       String      @default("citation-v1")
+  deploymentId  String?
+  deployment    Deployment? @relation(fields: [deploymentId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
 }
 
 // ── SEO Advisor (pre-deploy suggestion feature) — additive only ──
 
 model SeoScan {
-  id             String          @id @default(cuid())
+  id             String   @id @default(cuid())
   pageUrl        String
-  targetKeywords String          // JSON string array
-  content        String          // JSON serialized AdvisorPageContent, captured at scan time
-  status         String          // "SCANNING", "COMPLETE", "FAILED"
-  createdAt      DateTime        @default(now())
+  targetKeywords String // JSON string array
+  content        String // JSON serialized AdvisorPageContent, captured at scan time
+  status         String // "SCANNING", "COMPLETE", "FAILED"
+  createdAt      DateTime @default(now())
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  baseSha        String?
+  sourcePath     String?
+  sourceContent  String?
+  provenance     String   @default("legacy-unverified")
+  sourceRef      String?
+  sourcePrNumber Int?
 
-  suggestions    SeoSuggestion[]
-  prs            SeoOptimizationPR[]
+  suggestions SeoSuggestion[]
+  prs         SeoOptimizationPR[]
+
+  @@index([projectId, createdAt])
+}
+
+model WorkerHeartbeat {
+  id        String   @id
+  startedAt DateTime @default(now())
+  seenAt    DateTime @default(now())
+  status    String   @default("RUNNING")
+}
+
+model Recovery {
+  id           String     @id @default(cuid())
+  findingId    String     @unique
+  finding      Finding    @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  verifiedAt   DateTime   @default(now())
+  method       String     @default("complete-revision-verified-crawl")
+
+  @@index([deploymentId])
 }
 
 model SeoSuggestion {
   id         String   @id @default(cuid())
   scanId     String
   scan       SeoScan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
-  type       String   // "add-keyword" | "remove-keyword" | "rewrite-title" | "rewrite-meta" | "heading-change" | "internal-link"
-  location   String   // e.g. "H1", "meta description", "paragraph 2"
+  type       String // "add-keyword" | "remove-keyword" | "rewrite-title" | "rewrite-meta" | "heading-change" | "internal-link"
+  location   String // e.g. "H1", "meta description", "paragraph 2"
   before     String
   after      String
   rationale  String
-  confidence Int      // 0 to 100
-  status     String   // "pending" | "approved" | "rejected" | "applied"
+  confidence Int // 0 to 100
+  status     String // "pending" | "approved" | "rejected" | "applied"
   createdAt  DateTime @default(now())
 }
 
 model SeoOptimizationPR {
-  id                  String   @id @default(cuid())
-  scanId              String
-  scan                SeoScan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
-  prUrl               String
-  prNumber            Int
-  appliedSuggestionIds String  // JSON string array
-  validationResult    String   // JSON { titleLength, metaLength, duplicateH1, keywordDensityOk }
-  status              String   // "OPEN" (never "MERGED" — SearchOps never merges)
-  createdAt           DateTime @default(now())
+  id                   String   @id @default(cuid())
+  scanId               String
+  scan                 SeoScan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  prUrl                String
+  prNumber             Int
+  appliedSuggestionIds String // JSON string array
+  validationResult     String // JSON { titleLength, metaLength, duplicateH1, keywordDensityOk }
+  status               String // "OPEN" (never "MERGED" — SearchOps never merges)
+  createdAt            DateTime @default(now())
+  operationKey         String?  @unique
+}
+
+model AnalysisJob {
+  id           String            @id @default(cuid())
+  projectId    String
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deploymentId String            @unique
+  deployment   Deployment        @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+  payload      String
+  status       String            @default("QUEUED")
+  attempts     Int               @default(0)
+  availableAt  DateTime          @default(now())
+  leaseToken   String?
+  leaseUntil   DateTime?
+  errorCode    String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deliveries   WebhookDelivery[]
+
+  @@index([status, availableAt])
+}
+
+model WebhookDelivery {
+  id        String      @id
+  event     String
+  repo      String
+  jobId     String
+  job       AnalysisJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+}
+
+model Operation {
+  key         String   @id
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  action      String
+  actor       String
+  requestHash String
+  status      String   @default("RUNNING")
+  response    String?
+  leaseToken  String
+  leaseUntil  DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId, action])
+}
+
+model RateBucket {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actor     String
+  projectId String
+  action    String
+  subjectId String
+  requestId String
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
 }

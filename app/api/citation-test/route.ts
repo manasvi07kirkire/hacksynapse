@@ -1,28 +1,60 @@
-import { NextRequest, NextResponse } from "next/server";
-import { runCitationProbabilityTest } from "@/lib/geo/citation-test";
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { url, pageText, query, expectedFacts } = body;
-
-    const samplePageText =
-      pageText ||
-      `The Digital Micrometer Caliper 0.01mm is manufactured with hardened stainless steel housing and features precision calibration accuracy of ±0.01mm across a measuring range of 0-150mm. Designed for harsh machine shop environments with an IP67 water and dust resistance rating. Powered by dual LCD readout with both metric and imperial conversion modes. MSRP is $149.00 with a 3-year factory calibration guarantee.`;
-
-    const result = await runCitationProbabilityTest({
-      url: url || "/products/digital-micrometer-caliper",
-      pageText: samplePageText,
-      query,
-      expectedFacts,
-    });
-
-    return NextResponse.json(result);
-  } catch (err: any) {
-    console.error("[API citation-test] Error:", err);
-    return NextResponse.json(
-      { error: err.message || "Failed to execute citation test" },
-      { status: 500 }
+import { z } from "zod";
+import { api, jsonBody } from "../../../lib/server/api";
+import { selector, url, text } from "../../../lib/server/validation";
+import { resolveProject, projectUrl } from "../../../lib/projects/service";
+import { extractTargetContent } from "../../../lib/seo-advisor/extract-target";
+import { runCitationProbabilityTest } from "../../../lib/geo/citation-test";
+import { db } from "../../../lib/db";
+import { operation } from "../../../lib/server/operation";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+export const POST = api(
+  async (req, actor) => {
+    const body = await jsonBody(
+      req,
+      selector
+        .extend({
+          url,
+          query: text,
+          expectedFacts: z
+            .array(z.string().trim().min(3).max(300))
+            .min(1)
+            .max(20)
+            .optional(),
+        })
+        .strict(),
     );
-  }
-}
+    const p = await resolveProject(actor, body);
+    const target = projectUrl(p, body.url);
+    const key = z
+      .string()
+      .min(8)
+      .max(100)
+      .parse(req.headers.get("idempotency-key"));
+    return operation(p.id, actor.id, "citation", key, body, async () => {
+      const content = await extractTargetContent(target);
+      const result = await runCitationProbabilityTest({
+        url: target,
+        pageText: content.textSample,
+        query: body.query,
+        expectedFacts: body.expectedFacts,
+      });
+      await db.citationTest.create({
+        data: {
+          projectId: p.id,
+          url: target,
+          query: result.query,
+          modelAnswer: result.modelAnswer,
+          modelUsed: result.modelUsed,
+          groundedFacts: JSON.stringify(result.groundedFacts),
+          score: result.score,
+          totalFacts: result.totalFacts,
+          version: "citation-v2",
+        },
+      });
+      return result;
+    });
+  },
+  { limit: 5 },
+);

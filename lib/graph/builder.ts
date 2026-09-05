@@ -1,156 +1,119 @@
+import { createHash } from "node:crypto";
 import { ExtractedPageData } from "../extract/types";
-import { GraphEdgeData, GraphNodeData, GraphSnapshotData, NodeHealth } from "./types";
-
+import { validateSchema } from "../extract/schema-validator";
+import { normalizeUrl } from "../crawler/safe-fetch";
+import { GraphEdgeData, GraphNodeData, GraphSnapshotData } from "./types";
+export const GRAPH_VERSION = "graph-v2";
+const identity = (value: string) =>
+  createHash("sha256").update(value).digest("hex").slice(0, 24);
 export function buildDiscoverabilityGraph(
   deploymentId: string,
-  pages: ExtractedPageData[]
+  pages: ExtractedPageData[],
 ): GraphSnapshotData {
-  const nodes: GraphNodeData[] = [];
-  const edges: GraphEdgeData[] = [];
-  const pageMapByUrl = new Map<string, string>(); // url -> nodeId
-
-  // 1. Identify and create template nodes
-  const templateMap = new Map<string, string>(); // templateName -> templateNodeId
-  
-  function getTemplateForUrl(url: string): string {
-    if (url.startsWith("/products") || url.startsWith("/item")) return "ProductPage.tsx";
-    if (url.startsWith("/blog") || url.startsWith("/posts")) return "BlogPost.tsx";
-    if (url.startsWith("/docs") || url.startsWith("/guide")) return "DocPage.tsx";
-    return "GenericPage.tsx";
-  }
-
-  // 2. Create Schema Entity Nodes registry
-  const schemaNodeMap = new Map<string, string>(); // schemaType -> schemaNodeId
-
-  // First pass: create all Page nodes
-  pages.forEach((page, idx) => {
-    const pageNodeId = `node_page_${idx}_${page.url.replace(/[^a-zA-Z0-9]/g, "_")}`;
-    pageMapByUrl.set(page.url, pageNodeId);
-
-    const templateName = getTemplateForUrl(page.url);
-    if (!templateMap.has(templateName)) {
-      const templateNodeId = `node_template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`;
-      templateMap.set(templateName, templateNodeId);
-      nodes.push({
-        id: templateNodeId,
-        type: "template",
-        url: templateName,
-        key: templateName,
-        title: `Template: ${templateName}`,
-        health: "PASS",
-        attrs: { templateName },
-      });
-    }
-
-    // Determine individual page health
-    let health: NodeHealth = "PASS";
-    const hasCanonical = Boolean(page.canonicalUrl);
-    const isNoindexed = page.robotsDirectives.noindex;
-    const hasSchema = page.jsonLdSchemas.length > 0;
-
-    if (isNoindexed || (!hasCanonical && !page.url.includes("404"))) {
-      health = "REGRESSION";
-    } else if (!hasSchema && (page.url.startsWith("/products") || page.url.startsWith("/blog"))) {
-      health = "DEGRADED";
-    }
-
-    const schemaTypes = page.jsonLdSchemas.map((s) => s["@type"]).filter(Boolean);
-
-    nodes.push({
-      id: pageNodeId,
+  const nodes = new Map<string, GraphNodeData>();
+  const edges = new Map<string, GraphEdgeData>();
+  const normalized = [
+    ...new Map(
+      pages.map((p) => [normalizeUrl(p.url, "https://identity.invalid"), p]),
+    ).entries(),
+  ].sort(([a], [b]) => a.localeCompare(b));
+  const pageIds = new Map(
+    normalized.map(([url]) => [url, `page_${identity(url)}`]),
+  );
+  const edge = (
+    fromNodeId: string,
+    toNodeId: string,
+    kind: GraphEdgeData["kind"],
+  ) => {
+    const id = identity(`${fromNodeId}:${kind}:${toNodeId}`);
+    edges.set(id, { id, fromNodeId, toNodeId, kind });
+  };
+  for (const [url, page] of normalized) {
+    const id = pageIds.get(url)!;
+    const schemas = page.jsonLdSchemas.map(validateSchema);
+    const schemaTypes = [
+      ...new Set(
+        schemas
+          .filter((s) => s.isValid)
+          .flatMap((s) =>
+            Array.isArray(s.raw["@type"])
+              ? s.raw["@type"].filter(
+                  (v: unknown): v is string =>
+                    typeof v === "string" && v.length > 0,
+                )
+              : [s.type],
+          ),
+      ),
+    ].sort() as string[];
+    const schemaErrors = [
+      ...(page.schemaErrors || []),
+      ...schemas.flatMap((s) => s.errors),
+    ];
+    nodes.set(id, {
+      id,
       type: "page",
-      url: page.url,
-      key: page.url,
-      title: page.title || page.url,
-      health,
+      key: url,
+      url,
+      title: page.title,
+      health:
+        page.statusCode !== 200 ||
+        !page.canonicalUrl ||
+        page.robotsDirectives.noindex ||
+        schemaErrors.length
+          ? "DEGRADED"
+          : "PASS",
       attrs: {
         statusCode: page.statusCode,
-        hasCanonical,
+        hasCanonical: !!page.canonicalUrl && !page.canonicalErrors?.length,
         canonicalTarget: page.canonicalUrl,
-        isNoindexed,
+        isNoindexed: page.robotsDirectives.noindex,
         schemaTypes,
+        schemaErrors,
+        titleMissing: !page.title,
+        metaDescriptionMissing: !page.metaDescription,
         internalOutlinks: page.internalLinks.length,
-        templateName,
       },
     });
-
-    // Edge: Page renders from Template
-    edges.push({
-      id: `edge_render_${pageNodeId}_${templateMap.get(templateName)}`,
-      fromNodeId: pageNodeId,
-      toNodeId: templateMap.get(templateName)!,
-      kind: "renders_from",
-    });
-
-    // Schema nodes and edges
-    schemaTypes.forEach((st) => {
-      const typeStr = Array.isArray(st) ? st[0] : st;
-      if (!schemaNodeMap.has(typeStr)) {
-        const schemaNodeId = `node_schema_${typeStr.replace(/[^a-zA-Z0-9]/g, "_")}`;
-        schemaNodeMap.set(typeStr, schemaNodeId);
-        nodes.push({
-          id: schemaNodeId,
-          type: "schema",
-          url: `schema:${typeStr}`,
-          key: typeStr,
-          title: `Schema: ${typeStr}`,
-          health: "PASS",
-          attrs: { schemaType: typeStr },
-        });
-      }
-
-      edges.push({
-        id: `edge_schema_${pageNodeId}_${schemaNodeMap.get(typeStr)}`,
-        fromNodeId: pageNodeId,
-        toNodeId: schemaNodeMap.get(typeStr)!,
-        kind: "has_schema",
+    for (const type of schemaTypes) {
+      const sid = `schema_${identity(type)}`;
+      nodes.set(sid, {
+        id: sid,
+        type: "schema",
+        key: `schema:${type}`,
+        url: `schema:${type}`,
+        title: type,
+        health: "PASS",
+        attrs: { schemaType: type },
       });
-    });
-  });
-
-  // Second pass: Link graph & Canonical graph
-  pages.forEach((page) => {
-    const fromNodeId = pageMapByUrl.get(page.url);
-    if (!fromNodeId) return;
-
-    // Internal links
-    page.internalLinks.forEach((targetUrl) => {
-      const cleanTarget = targetUrl.split("?")[0].split("#")[0];
-      const toNodeId = pageMapByUrl.get(cleanTarget);
-      if (toNodeId && toNodeId !== fromNodeId) {
-        edges.push({
-          id: `edge_link_${fromNodeId}_${toNodeId}`,
-          fromNodeId,
-          toNodeId,
-          kind: "links_to",
-        });
-      }
-    });
-
-    // Canonical to
-    if (page.canonicalUrl) {
+      edge(id, sid, "has_schema");
+    }
+  }
+  for (const [url, page] of normalized) {
+    const id = pageIds.get(url)!;
+    for (const link of page.internalLinks) {
       try {
-        const targetPath = new URL(page.canonicalUrl, "https://example.com").pathname;
-        const toCanonicalNodeId = pageMapByUrl.get(targetPath);
-        if (toCanonicalNodeId) {
-          edges.push({
-            id: `edge_canon_${fromNodeId}_${toCanonicalNodeId}`,
-            fromNodeId,
-            toNodeId: toCanonicalNodeId,
-            kind: "canonical_to",
-          });
-        }
+        const target = pageIds.get(normalizeUrl(link, url));
+        if (target && target !== id) edge(id, target, "links_to");
       } catch {
-        // External canonical
+        /* Invalid extracted links do not enter graph. */
       }
     }
-  });
-
+    if (page.canonicalUrl) {
+      try {
+        const target = pageIds.get(normalizeUrl(page.canonicalUrl, url));
+        if (target) edge(id, target, "canonical_to");
+      } catch {
+        /* Canonical error remains in extraction evidence. */
+      }
+    }
+  }
   return {
     id: `snapshot_${deploymentId}`,
     deploymentId,
-    nodes,
-    edges,
+    version: GRAPH_VERSION,
+    complete: true,
+    nodes: [...nodes.values()].sort((a, b) => a.id.localeCompare(b.id)),
+    edges: [...edges.values()].sort((a, b) => a.id.localeCompare(b.id)),
     createdAt: new Date().toISOString(),
   };
 }

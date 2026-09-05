@@ -25,7 +25,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
     <div
       className={clsx(
         "bg-bone-100 border border-bone-300 rounded-md border-l-[3px] border-l-steel-400 flex flex-col gap-3 p-4 sm:p-5 transition-opacity",
-        isApplied && "opacity-60"
+        isApplied && "opacity-60",
       )}
     >
       {/* Header row */}
@@ -51,7 +51,9 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
       </div>
 
       {/* Rationale */}
-      <p className="font-sans text-sm text-bone-700 leading-relaxed">{suggestion.rationale}</p>
+      <p className="font-sans text-sm text-bone-700 leading-relaxed">
+        {suggestion.rationale}
+      </p>
 
       {/* Actions / status */}
       {isApplied ? (
@@ -68,7 +70,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
               "flex-1 py-2 px-3 min-h-[38px] rounded-sm border font-mono text-xs sm:text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40",
               isRejected
                 ? "border-bone-500 bg-bone-300/40 text-bone-700"
-                : "border-bone-500 text-bone-700 hover:bg-bone-300/30"
+                : "border-bone-500 text-bone-700 hover:bg-bone-300/30",
             )}
           >
             − Reject
@@ -80,7 +82,7 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
               "flex-1 py-2 px-3 min-h-[38px] rounded-sm border font-mono text-xs sm:text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40",
               suggestion.status === "approved"
                 ? "border-patina-400 bg-patina-400 text-bone-100"
-                : "border-patina-400 text-patina-600 hover:bg-patina-400/10"
+                : "border-patina-400 text-patina-600 hover:bg-patina-400/10",
             )}
           >
             {suggestion.status === "approved" ? "✓ Approved" : "+ Approve"}

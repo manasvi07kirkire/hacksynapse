@@ -1,0 +1,31 @@
+services:
+  - type: worker
+    name: searchops-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    dockerContext: .
+    plan: starter
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SEARCHOPS_API_KEY
+        sync: false
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
+        sync: false
+      - key: GITHUB_APP_SLUG
+        sync: false
+      - key: GITHUB_APP_WEBHOOK_SECRET
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false

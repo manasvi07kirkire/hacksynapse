@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ProjectAccess } from "../components/ProjectAccess";
 
 export const metadata: Metadata = {
   title: "SearchOps — The Field Manual",
@@ -22,14 +23,14 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
         />
       </head>
       <body className="bg-bone-100 text-ink-900 font-sans antialiased selection:bg-ember-600/20 selection:text-ember-600 min-h-screen">
-        {children}
+        <ProjectAccess>{children}</ProjectAccess>
       </body>
     </html>
   );

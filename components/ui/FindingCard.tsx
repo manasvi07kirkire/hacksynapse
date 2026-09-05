@@ -2,7 +2,13 @@
 
 import React from "react";
 import clsx from "clsx";
-import { AlertCircle, FileCode, CheckCircle, Sparkles, Wrench } from "lucide-react";
+import {
+  AlertCircle,
+  FileCode,
+  CheckCircle,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 import { FindingData } from "@/lib/detect/types";
 import { TierBadge } from "./TierBadge";
 
@@ -31,7 +37,7 @@ export const FindingCard: React.FC<FindingCardProps> = ({
     <div
       className={clsx(
         "bg-ink-800 border border-ink-700 rounded-md p-5 sm:p-6 border-l-[5px] transition-all flex flex-col gap-5 relative overflow-hidden shadow-card",
-        borderColor
+        borderColor,
       )}
     >
       {/* Top Meta Header */}
@@ -45,7 +51,7 @@ export const FindingCard: React.FC<FindingCardProps> = ({
                 ? "text-patina-400 bg-patina-tint border-patina-400/40"
                 : isCritical
                   ? "text-ember-400 bg-ember-tint border-ember-400/40"
-                  : "text-marigold-400 bg-marigold-tint border-marigold-400/40"
+                  : "text-marigold-400 bg-marigold-tint border-marigold-400/40",
             )}
           >
             {isResolved ? (
@@ -78,8 +84,12 @@ export const FindingCard: React.FC<FindingCardProps> = ({
       {/* Title & LLM Narration */}
       <div className="flex flex-col gap-3">
         <h3 className="font-sans font-semibold text-lg sm:text-xl text-bone-100 flex items-center gap-2.5 leading-snug">
-          {!isResolved && <AlertCircle className="w-5 h-5 text-ember-400 shrink-0" />}
-          {isResolved && <CheckCircle className="w-5 h-5 text-patina-400 shrink-0" />}
+          {!isResolved && (
+            <AlertCircle className="w-5 h-5 text-ember-400 shrink-0" />
+          )}
+          {isResolved && (
+            <CheckCircle className="w-5 h-5 text-patina-400 shrink-0" />
+          )}
           <span>{finding.title}</span>
         </h3>
 
@@ -122,10 +132,15 @@ export const FindingCard: React.FC<FindingCardProps> = ({
             </div>
             {finding.evidence.sampleUrls && (
               <div className="mt-1 pt-2 border-t border-ink-700">
-                <span className="text-bone-500 text-xs block mb-1">Sample Regressed URLs:</span>
+                <span className="text-bone-500 text-xs block mb-1">
+                  Sample Regressed URLs:
+                </span>
                 <div className="flex flex-col gap-1 text-xs text-bone-400">
                   {finding.evidence.sampleUrls.slice(0, 2).map((u, i) => (
-                    <code key={i} className="truncate text-bone-300 bg-ink-900 px-2 py-0.5 rounded-sm">
+                    <code
+                      key={i}
+                      className="truncate text-bone-300 bg-ink-900 px-2 py-0.5 rounded-sm"
+                    >
                       {u}
                     </code>
                   ))}
@@ -149,7 +164,10 @@ export const FindingCard: React.FC<FindingCardProps> = ({
                   {finding.rootCause.file}:{finding.rootCause.line}
                 </div>
                 <div className="text-bone-500 text-sm">
-                  Component: <span className="text-bone-300">{finding.rootCause.component}</span>
+                  Component:{" "}
+                  <span className="text-bone-300">
+                    {finding.rootCause.component}
+                  </span>
                 </div>
                 {finding.rootCause.snippet && (
                   <pre className="text-xs text-ember-400 bg-ink-900 p-2.5 rounded-sm border border-ink-700 overflow-x-auto mt-1 leading-relaxed">
@@ -171,7 +189,9 @@ export const FindingCard: React.FC<FindingCardProps> = ({
               className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-ember-500 hover:bg-ember-400 text-bone-100 rounded-sm font-mono text-sm font-bold tracking-wider uppercase transition-all shadow-cta disabled:opacity-50"
             >
               <Wrench className="w-4 h-4" />
-              <span>{isFixing ? "VALIDATING PATCH..." : "GENERATE AUTO-FIX PR"}</span>
+              <span>
+                {isFixing ? "VALIDATING PATCH..." : "GENERATE AUTO-FIX PR"}
+              </span>
             </button>
           )}
         </div>

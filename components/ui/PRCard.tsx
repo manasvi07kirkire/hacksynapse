@@ -48,7 +48,7 @@ export const PRCard: React.FC<PRCardProps> = ({
             "font-mono text-xs font-bold px-2.5 py-1 rounded-sm border uppercase tracking-wider",
             isApplied
               ? "text-patina-400 bg-patina-tint border-patina-400/40"
-              : "text-marigold-400 bg-marigold-tint border-marigold-400/40"
+              : "text-marigold-400 bg-marigold-tint border-marigold-400/40",
           )}
         >
           {isApplied ? "● MERGED & DEPLOYED" : "● READY TO MERGE"}
@@ -57,15 +57,23 @@ export const PRCard: React.FC<PRCardProps> = ({
 
       {/* PR Summary */}
       <div className="flex flex-col gap-1.5">
-        <h4 className="font-sans font-bold text-base sm:text-lg text-bone-100">{title}</h4>
-        <p className="font-sans text-sm text-bone-300 leading-relaxed">{body}</p>
+        <h4 className="font-sans font-bold text-base sm:text-lg text-bone-100">
+          {title}
+        </h4>
+        <p className="font-sans text-sm text-bone-300 leading-relaxed">
+          {body}
+        </p>
       </div>
 
       {/* Diff Box */}
       <div className="flex flex-col gap-2 font-mono">
         <div className="flex items-center justify-between text-xs sm:text-sm text-bone-400">
-          <span>Target: <strong className="text-bone-100">{targetFile}</strong></span>
-          <span className="text-xs text-patina-400 uppercase font-bold">Unified Git Diff</span>
+          <span>
+            Target: <strong className="text-bone-100">{targetFile}</strong>
+          </span>
+          <span className="text-xs text-patina-400 uppercase font-bold">
+            Unified Git Diff
+          </span>
         </div>
 
         <div className="bg-ink-900 border border-ink-700 rounded-sm p-3.5 font-mono text-xs sm:text-sm overflow-x-auto">
@@ -73,7 +81,10 @@ export const PRCard: React.FC<PRCardProps> = ({
             {diff.split("\n").map((line, idx) => {
               const isAdd = line.startsWith("+") && !line.startsWith("+++");
               const isDel = line.startsWith("-") && !line.startsWith("---");
-              const isHeader = line.startsWith("@@") || line.startsWith("---") || line.startsWith("+++");
+              const isHeader =
+                line.startsWith("@@") ||
+                line.startsWith("---") ||
+                line.startsWith("+++");
 
               return (
                 <div
@@ -82,7 +93,7 @@ export const PRCard: React.FC<PRCardProps> = ({
                     "px-1 py-0.5 rounded-sm",
                     isAdd && "bg-patina-tint text-patina-400 font-semibold",
                     isDel && "bg-ember-tint text-ember-400 font-semibold",
-                    isHeader && "text-bone-500 font-bold opacity-80"
+                    isHeader && "text-bone-500 font-bold opacity-80",
                   )}
                 >
                   {line}
@@ -97,15 +108,21 @@ export const PRCard: React.FC<PRCardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs sm:text-sm font-mono">
         <div className="bg-ink-850 p-2.5 rounded-sm border border-ink-700 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-patina-400 shrink-0" />
-          <span className="truncate text-bone-300">1. AST: <strong className="text-patina-400">PASS</strong></span>
+          <span className="truncate text-bone-300">
+            1. AST: <strong className="text-patina-400">PASS</strong>
+          </span>
         </div>
         <div className="bg-ink-850 p-2.5 rounded-sm border border-ink-700 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-patina-400 shrink-0" />
-          <span className="truncate text-bone-300">2. Rules: <strong className="text-patina-400">0 FAIL</strong></span>
+          <span className="truncate text-bone-300">
+            2. Rules: <strong className="text-patina-400">0 FAIL</strong>
+          </span>
         </div>
         <div className="bg-ink-850 p-2.5 rounded-sm border border-ink-700 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-patina-400 shrink-0" />
-          <span className="truncate text-bone-300">3. Build: <strong className="text-patina-400">CLEAN</strong></span>
+          <span className="truncate text-bone-300">
+            3. Build: <strong className="text-patina-400">CLEAN</strong>
+          </span>
         </div>
       </div>
 

@@ -1,14 +1,10 @@
-import * as parser from "@babel/parser";
-import traverse from "@babel/traverse";
 import { FindingData } from "../detect/types";
-
 export interface GitDiffFile {
   filename: string;
   patch: string;
   additions: number;
   deletions: number;
 }
-
 export interface DiagnosisResult {
   file: string;
   line: number;
@@ -17,142 +13,54 @@ export interface DiagnosisResult {
   matchedSignature: string;
   snippet: string;
 }
-
-/**
- * Deterministic Git Diff Signature Matcher:
- * Scans unified git diffs with AST/regex signatures to pinpoint root cause file:line.
- */
 export function diagnoseRootCause(
-  finding: FindingData,
-  diffFiles: GitDiffFile[]
+  finding: Pick<FindingData, "type">,
+  files: GitDiffFile[],
 ): DiagnosisResult | null {
-  for (const file of diffFiles) {
-    const patch = file.patch;
-    const lines = patch.split("\n");
-
-    // 1. Signature for CANONICAL_STRIPPED: Removal of canonical link tag or metadata canonical generator
-    if (finding.type === "CANONICAL_STRIPPED") {
-      let origLineNum = 1;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const lineMatch = line.match(/^@@ -(\d+),?\d* \+(\d+),?\d* @@/);
-        if (lineMatch) {
-          origLineNum = parseInt(lineMatch[1], 10);
-          continue;
-        }
-
-        // Deleted line specifically mentioning canonical
-        if (
-          line.startsWith("-") &&
-          (line.includes("canonical") || line.includes("rel=\"canonical\""))
-        ) {
-          return {
-            file: file.filename,
-            line: origLineNum,
-            component: "ProductMetadata",
-            confidence: 96,
-            matchedSignature: "CANONICAL_TAG_REMOVAL_SIG",
-            snippet: line.substring(1).trim(),
-          };
-        }
-
-        if (!line.startsWith("+")) {
-          origLineNum++;
-        }
+  const candidates: DiagnosisResult[] = [];
+  for (const file of [...files].sort((a, b) =>
+    a.filename.localeCompare(b.filename),
+  )) {
+    let oldLine = 0;
+    let newLine = 0;
+    let inHunk = false;
+    for (const line of file.patch.split("\n")) {
+      const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+      if (hunk) {
+        oldLine = Number(hunk[1]);
+        newLine = Number(hunk[2]);
+        inHunk = true;
+        continue;
       }
-    }
-
-    // 2. Signature for NOINDEX_FLIPPED: Adding robots: { index: false } or meta noindex
-    if (finding.type === "NOINDEX_FLIPPED") {
-      let newLineNum = 1;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const lineMatch = line.match(/^@@ -(\d+),?\d* \+(\d+),?\d* @@/);
-        if (lineMatch) {
-          newLineNum = parseInt(lineMatch[2] || lineMatch[1], 10);
-          continue;
-        }
-
-        if (
-          line.startsWith("+") &&
-          (line.includes("noindex") ||
-            line.includes("index: false") ||
-            line.includes("robots: { index: false }"))
-        ) {
-          return {
-            file: file.filename,
-            line: newLineNum,
-            component: "RobotsConfig",
-            confidence: 100,
-            matchedSignature: "ROBOTS_NOINDEX_INJECTION_SIG",
-            snippet: line.substring(1).trim(),
-          };
-        }
-
-        if (!line.startsWith("-")) {
-          newLineNum++;
-        }
-      }
-    }
-
-    // 3. Signature for SCHEMA_REMOVED: Removal of ld+json script tag or Schema component
-    if (finding.type === "SCHEMA_REMOVED") {
-      let origLineNum = 1;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const lineMatch = line.match(/^@@ -(\d+),?\d* \+(\d+),?\d* @@/);
-        if (lineMatch) {
-          origLineNum = parseInt(lineMatch[1], 10);
-          continue;
-        }
-
-        if (
-          line.startsWith("-") &&
-          (line.includes("application/ld+json") ||
-            line.includes("ArticleJsonLd") ||
-            line.includes("ProductJsonLd") ||
-            line.includes("JsonLd"))
-        ) {
-          return {
-            file: file.filename,
-            line: origLineNum,
-            component: "BlogJsonLd",
-            confidence: 94,
-            matchedSignature: "JSONLD_SCHEMA_STRIP_SIG",
-            snippet: line.substring(1).trim(),
-          };
-        }
-
-        if (!line.startsWith("+")) {
-          origLineNum++;
-        }
-      }
+      if (!inHunk) continue;
+      const canonical =
+        finding.type === "CANONICAL_STRIPPED" &&
+        line.startsWith("-") &&
+        /\bcanonical\b/.test(line);
+      const robots =
+        finding.type === "NOINDEX_FLIPPED" &&
+        line.startsWith("+") &&
+        /\bnoindex\b|\bindex\s*:\s*false/.test(line);
+      const schema =
+        finding.type === "SCHEMA_REMOVED" &&
+        line.startsWith("-") &&
+        /application\/ld\+json|JsonLd/.test(line);
+      if (canonical || robots || schema)
+        candidates.push({
+          file: file.filename,
+          line: robots ? newLine : oldLine,
+          component: "unattributed",
+          confidence: 80,
+          matchedSignature: canonical
+            ? "CANONICAL_TAG_REMOVAL_SIG"
+            : robots
+              ? "ROBOTS_NOINDEX_INJECTION_SIG"
+              : "JSONLD_SCHEMA_STRIP_SIG",
+          snippet: line.slice(1).trim().slice(0, 500),
+        });
+      if (line.startsWith(" ") || line.startsWith("-")) oldLine++;
+      if (line.startsWith(" ") || line.startsWith("+")) newLine++;
     }
   }
-
-  // Seeded fallback attribution if diff files are not loaded from git
-  if (finding.type === "CANONICAL_STRIPPED") {
-    return {
-      file: "src/app/products/[slug]/page.tsx",
-      line: 184,
-      component: "ProductMetadata",
-      confidence: 96,
-      matchedSignature: "CANONICAL_TAG_REMOVAL_SIG",
-      snippet: "alternates: { canonical: `https://store.acme.com/products/${params.slug}` }",
-    };
-  }
-
-  if (finding.type === "SCHEMA_REMOVED") {
-    return {
-      file: "src/components/blog/ArticleSchema.tsx",
-      line: 42,
-      component: "BlogJsonLd",
-      confidence: 94,
-      matchedSignature: "JSONLD_SCHEMA_STRIP_SIG",
-      snippet: "<script type=\"application/ld+json\" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />",
-    };
-  }
-
-  return null;
+  return candidates.length === 1 ? candidates[0] : null;
 }

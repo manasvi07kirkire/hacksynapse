@@ -1,42 +1,38 @@
-import { extractTargetContent } from "../lib/seo-advisor/extract-target";
-import { generateSuggestions } from "../lib/seo-advisor/suggest";
-import { applyApprovedSuggestions } from "../lib/seo-advisor/apply";
+import assert from "node:assert/strict";
+import { extractHtmlContent } from "../lib/seo-advisor/extract-target";
+import { generateHeuristicSuggestions } from "../lib/seo-advisor/suggest";
+import { applySourceSuggestions } from "../lib/seo-advisor/source-apply";
 import { openPullRequest } from "../lib/seo-advisor/open-pr";
-
 async function testSeoAdvisor() {
-  console.log("=== Testing SEO Advisor Pipeline ===");
-  const pageUrl = "https://store.acme-industrial.com/products/laser-tachometer-50000rpm";
-  const targetKeywords = ["non-contact tachometer", "50000 RPM digital tachometer"];
-
-  console.log("1. Extracting content...");
-  const content = await extractTargetContent(pageUrl);
-  console.log("Extracted title:", content.title);
-  console.log("Extracted paragraphs:", content.paragraphs.length);
-
-  console.log("\n2. Generating suggestions...");
-  const suggestions = await generateSuggestions({ pageUrl, targetKeywords, content });
-  console.log(`Generated ${suggestions.length} suggestions:`);
-  suggestions.forEach((s, i) => {
-    console.log(` [${i + 1}] Type: ${s.type} | Location: ${s.location} | Confidence: ${s.confidence}% | Rationale: ${s.rationale}`);
+  const pageUrl = "https://site.example/";
+  const source =
+    '<html><head><title>Workshop tool catalog</title><meta name="description" content="A source description of workshop equipment and precision tools, their care, storage and maintenance."></head><body><h1>Catalog</h1><p>Precision tools include clear documentation about normal operation and calibration plus storage procedures, maintenance instructions, care notes and workshop handling requirements.</p></body></html>';
+  const content = extractHtmlContent(pageUrl, source);
+  const suggestions = generateHeuristicSuggestions({
+    pageUrl,
+    targetKeywords: ["precision"],
+    content,
   });
-
-  if (suggestions.length > 0) {
-    console.log("\n3. Testing PR application & validation...");
-    const approved = [suggestions[0]];
-    const { diff, validation } = applyApprovedSuggestions(pageUrl, content, targetKeywords, approved);
-    console.log("Validation passed:", validation.passed);
-    console.log("Diff generated length:", diff.length);
-
-    console.log("\n4. Testing openPullRequest...");
-    const pr = openPullRequest(pageUrl, approved);
-    console.log("PR URL:", pr.prUrl);
-    console.log("PR Number:", pr.prNumber);
-  }
-
-  console.log("\n>>> ALL SEO ADVISOR TESTS PASSED SUCCESSFULLY! <<<");
+  assert.equal(suggestions.length, 1);
+  const result = applySourceSuggestions(
+    "index.html",
+    pageUrl,
+    source,
+    content,
+    ["precision"],
+    suggestions,
+  );
+  assert.equal(result.validation.passed, true);
+  assert.match(result.diff, /precision/);
+  await assert.rejects(
+    () => openPullRequest(pageUrl, suggestions),
+    /Authorized source/,
+  );
+  console.info(
+    "SEO source/validation compatibility checks passed. Real PR replay is exercised by npm run test:integration.",
+  );
 }
-
 testSeoAdvisor().catch((e) => {
-  console.error("Test failed:", e);
-  process.exit(1);
+  console.error(e);
+  process.exitCode = 1;
 });

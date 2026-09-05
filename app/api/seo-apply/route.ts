@@ -1,136 +1,143 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { AdvisorPageContent, Suggestion } from "@/lib/seo-advisor/types";
-import { applyApprovedSuggestions } from "@/lib/seo-advisor/apply";
-import { openPullRequest } from "@/lib/seo-advisor/open-pr";
-import { extractTargetContent } from "@/lib/seo-advisor/extract-target";
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const scanId: string = body.scanId;
-    const approvedSuggestionIds: string[] = Array.isArray(body.approvedSuggestionIds) ? body.approvedSuggestionIds : [];
-    const rejectedSuggestionIds: string[] = Array.isArray(body.rejectedSuggestionIds) ? body.rejectedSuggestionIds : [];
-
-    if (!scanId || approvedSuggestionIds.length === 0) {
-      return NextResponse.json(
-        { error: "scanId and at least one approved suggestion id are required" },
-        { status: 400 }
-      );
-    }
-
-    let scan: any = null;
-    try {
-      scan = await db.seoScan.findUnique({
-        where: { id: scanId },
-        include: { suggestions: true },
-      });
-    } catch (dbErr: any) {
-      console.warn("[API seo-apply] DB lookup error:", dbErr.message);
-    }
-
-    let pageUrl = scan?.pageUrl || body.pageUrl || "https://store.acme-industrial.com/products/laser-tachometer-50000rpm";
-    let content: AdvisorPageContent = scan ? JSON.parse(scan.content) : (body.content || await extractTargetContent(pageUrl));
-    let targetKeywords: string[] = scan ? JSON.parse(scan.targetKeywords) : (body.targetKeywords || ["non-contact tachometer", "50000 RPM digital tachometer"]);
-    
-    let approved: Suggestion[] = [];
-    if (scan?.suggestions) {
-      approved = scan.suggestions
-        .filter((s: any) => approvedSuggestionIds.includes(s.id))
-        .map((s: any) => ({
-          id: s.id,
-          type: s.type as Suggestion["type"],
-          location: s.location,
-          before: s.before,
-          after: s.after,
-          rationale: s.rationale,
-          confidence: s.confidence,
-          status: "approved" as const,
-        }));
-    } else if (body.approvedSuggestions) {
-      approved = body.approvedSuggestions;
-    } else {
-      // Fallback construction for approved suggestions
-      approved = approvedSuggestionIds.map((id) => ({
-        id,
-        type: "rewrite-title" as const,
-        location: "title",
-        before: content.title || "",
-        after: `${content.title || ""} — non-contact tachometer`,
-        rationale: "Target keyword included in title",
-        confidence: 85,
-        status: "approved" as const,
-      }));
-    }
-
-    if (scan) {
-      try {
-        await db.$transaction([
-          db.seoSuggestion.updateMany({
-            where: { id: { in: approvedSuggestionIds }, scanId },
-            data: { status: "approved" },
-          }),
-          ...(rejectedSuggestionIds.length > 0
-            ? [
-                db.seoSuggestion.updateMany({
-                  where: { id: { in: rejectedSuggestionIds }, scanId },
-                  data: { status: "rejected" },
-                }),
-              ]
-            : []),
-        ]);
-      } catch (e: any) {
-        console.warn("[API seo-apply] DB transaction status update skipped:", e.message);
-      }
-    }
-
-    const { diff, validation } = applyApprovedSuggestions(pageUrl, content, targetKeywords, approved);
-
-    if (!validation.passed) {
-      return NextResponse.json(
-        {
-          error: "Patched content failed on-page validation — PR was not opened.",
-          validation,
-        },
-        { status: 422 }
-      );
-    }
-
-    const { prUrl, prNumber, body: prBody } = openPullRequest(pageUrl, approved);
-
-    if (scan) {
-      try {
-        await db.$transaction([
-          db.seoSuggestion.updateMany({
-            where: { id: { in: approvedSuggestionIds }, scanId },
+import { z } from "zod";
+import { api, jsonBody } from "../../../lib/server/api";
+import { selector, id } from "../../../lib/server/validation";
+import { resolveProject, projectUrl } from "../../../lib/projects/service";
+import { db } from "../../../lib/db";
+import { github } from "../../../lib/github/client";
+import { fail } from "../../../lib/server/errors";
+import { operation } from "../../../lib/server/operation";
+import {
+  applySourceSuggestions,
+  validateSelection,
+} from "../../../lib/seo-advisor/source-apply";
+import { AdvisorPageContent, Suggestion } from "../../../lib/seo-advisor/types";
+import { openPullRequest } from "../../../lib/seo-advisor/open-pr";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+export const POST = api(
+  async (req, actor) => {
+    const body = await jsonBody(
+      req,
+      selector
+        .extend({
+          scanId: id,
+          approvedSuggestionIds: z.array(id).min(1).max(6),
+          rejectedSuggestionIds: z.array(id).max(6).default([]),
+          edits: z.record(id, z.string().trim().min(1).max(2000)).default({}),
+        })
+        .strict(),
+    );
+    const p = await resolveProject(actor, body);
+    const scan = await db.seoScan.findFirst({
+      where: { id: body.scanId, projectId: p.id },
+      include: { suggestions: true },
+    });
+    if (!scan) fail(404, "NOT_FOUND", "Scan not found.");
+    validateSelection(
+      scan.suggestions.map((s) => s.id),
+      body.approvedSuggestionIds,
+      body.rejectedSuggestionIds,
+      Object.keys(body.edits),
+    );
+    const params = {
+      approved: [...body.approvedSuggestionIds].sort(),
+      rejected: [...body.rejectedSuggestionIds].sort(),
+      edits: Object.fromEntries(Object.entries(body.edits).sort()),
+    };
+    return operation(
+      p.id,
+      actor.id,
+      "seo-apply",
+      scan.id,
+      params,
+      async (key) => {
+        if (
+          !scan.baseSha ||
+          !scan.sourcePath ||
+          scan.sourceContent === null ||
+          scan.status !== "COMPLETE"
+        )
+          fail(409, "UNVERIFIED_SCAN", "Scan has no verified source.");
+        projectUrl(p, scan.pageUrl);
+        if (JSON.parse(p.sourceMap)[new URL(scan.pageUrl).pathname] !== scan.sourcePath) fail(409, "STALE_SCAN", "Source mapping changed; create a new scan.");
+        if (scan.sourcePrNumber) {
+          const pull = z.object({ state: z.literal("open"), head: z.object({ sha: z.string(), ref: z.string(), repo: z.object({ full_name: z.string() }) }), base: z.object({ ref: z.string() }) }).parse(await github.request(p, `/pulls/${scan.sourcePrNumber}`));
+          if (pull.head.sha !== scan.baseSha || pull.head.ref !== scan.sourceRef || pull.head.repo.full_name.toLowerCase() !== p.repo || pull.base.ref !== p.defaultBranch) fail(409, "STALE_SCAN", "Pull request changed; create a new scan.");
+        }
+        if (
+          (await github.head(p, scan.sourceRef || p.defaultBranch)) !==
+          scan.baseSha
+        )
+          fail(
+            409,
+            "STALE_SCAN",
+            "Repository changed; scan the current revision before applying.",
+          );
+        const current = await github.file(p, scan.sourcePath, scan.baseSha);
+        if (current !== scan.sourceContent)
+          fail(409, "SOURCE_CHANGED", "Source differs from the scan.");
+        const approved = scan.suggestions
+          .filter((s) => body.approvedSuggestionIds.includes(s.id))
+          .map((s) => ({
+            ...s,
+            after: body.edits[s.id] || s.after,
+            status: "approved" as const,
+            type: s.type as Suggestion["type"],
+          }));
+        const result = applySourceSuggestions(
+          scan.sourcePath,
+          scan.pageUrl,
+          current,
+          JSON.parse(scan.content) as AdvisorPageContent,
+          JSON.parse(scan.targetKeywords),
+          approved,
+        );
+        if (!result.validation.passed)
+          fail(
+            422,
+            "SEO_VALIDATION_FAILED",
+            "Patched content failed on-page validation.",
+          );
+        const pr = await openPullRequest(scan.pageUrl, approved, {
+          project: p,
+          key,
+          baseSha: scan.baseSha,
+          baseBranch: scan.sourceRef || p.defaultBranch,
+          path: scan.sourcePath,
+          content: result.source,
+        });
+        await db.$transaction(async (tx) => {
+          await tx.seoSuggestion.updateMany({
+            where: { scanId: scan.id, id: { in: body.approvedSuggestionIds } },
             data: { status: "applied" },
-          }),
-          db.seoOptimizationPR.create({
-            data: {
-              scanId,
-              prUrl,
-              prNumber,
-              appliedSuggestionIds: JSON.stringify(approvedSuggestionIds),
-              validationResult: JSON.stringify(validation),
+          });
+          await tx.seoSuggestion.updateMany({
+            where: { scanId: scan.id, id: { in: body.rejectedSuggestionIds } },
+            data: { status: "rejected" },
+          });
+          await tx.seoOptimizationPR.upsert({
+            where: { operationKey: key },
+            update: {},
+            create: {
+              operationKey: key,
+              scanId: scan.id,
+              prUrl: pr.prUrl,
+              prNumber: pr.prNumber,
+              appliedSuggestionIds: JSON.stringify(body.approvedSuggestionIds),
+              validationResult: JSON.stringify(result.validation),
               status: "OPEN",
             },
-          }),
-        ]);
-      } catch (e: any) {
-        console.warn("[API seo-apply] DB PR creation skipped:", e.message);
-      }
-    }
-
-    return NextResponse.json({
-      prUrl,
-      prNumber,
-      prBody,
-      diff,
-      validation,
-      appliedSuggestionIds: approvedSuggestionIds,
-    });
-  } catch (err: any) {
-    console.error("[API seo-apply] Error:", err);
-    return NextResponse.json({ error: err.message || "Failed to generate PR" }, { status: 500 });
-  }
-}
+          });
+        });
+        return {
+          ...pr,
+          diff: result.diff,
+          validation: result.validation,
+          appliedSuggestionIds: body.approvedSuggestionIds,
+        };
+      },
+    );
+  },
+  { limit: 5 },
+);

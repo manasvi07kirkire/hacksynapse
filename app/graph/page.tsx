@@ -2,9 +2,12 @@
 
 export const dynamic = "force-dynamic";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { FieldManualNav, FieldManualSidebar } from "@/components/layout/FieldManualNav";
+import {
+  FieldManualNav,
+  FieldManualSidebar,
+} from "@/components/layout/FieldManualNav";
 import {
   Network,
   ArrowLeft,
@@ -18,20 +21,118 @@ import {
   ExternalLink,
 } from "lucide-react";
 import clsx from "clsx";
+import { useProject } from "../../components/ProjectAccess";
+import { GraphCanvas } from "../../components/ui/GraphCanvas";
+import { GraphSnapshotData } from "../../lib/graph/types";
 
 export default function CrawlerGraphPage() {
-  const [selectedNode, setSelectedNode] = useState<string | null>("node-product");
-  const [filterType, setFilterType] = useState<"ALL" | "PAGES" | "ERRORS">("ALL");
+  const { project } = useProject();
+  const [snapshot, setSnapshot] = useState<GraphSnapshotData | null>(null);
+  const [loadError, setLoadError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    setSnapshot(null);
+    setLoadError("");
+    if (project)
+      void fetch(`/api/graph?projectId=${project.id}`, {
+        signal: controller.signal,
+      })
+        .then(async (res) => {
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error);
+          if (!controller.signal.aborted) setSnapshot(body.snapshot);
+        })
+        .catch((e) => {
+          if (!controller.signal.aborted) setLoadError(e.message);
+        });
+    return () => controller.abort();
+  }, [project]);
+  const [selectedNode, setSelectedNode] = useState<string | null>(
+    "node-product",
+  );
+  const [filterType, setFilterType] = useState<"ALL" | "PAGES" | "ERRORS">(
+    "ALL",
+  );
 
   const streamLogs = [
-    { time: "23:14:02.104", method: "GET", url: "/products/digital-micrometer-caliper", status: 200, latency: "24ms", canonical: "MISSING", alert: true },
-    { time: "23:14:01.890", method: "GET", url: "/products/dial-indicator-001", status: 200, latency: "18ms", canonical: "MISSING", alert: true },
-    { time: "23:14:00.450", method: "GET", url: "/categories/precision-measuring", status: 200, latency: "31ms", canonical: "OK", alert: false },
-    { time: "23:13:58.210", method: "GET", url: "/robots.txt", status: 200, latency: "8ms", canonical: "N/A", alert: false },
-    { time: "23:13:55.770", method: "GET", url: "/sitemap.xml", status: 200, latency: "42ms", canonical: "OK", alert: false },
-    { time: "23:13:52.120", method: "GET", url: "/products/depth-gauge-pro", status: 404, latency: "12ms", canonical: "ERROR", alert: true },
+    {
+      time: "23:14:02.104",
+      method: "GET",
+      url: "/products/digital-micrometer-caliper",
+      status: 200,
+      latency: "24ms",
+      canonical: "MISSING",
+      alert: true,
+    },
+    {
+      time: "23:14:01.890",
+      method: "GET",
+      url: "/products/dial-indicator-001",
+      status: 200,
+      latency: "18ms",
+      canonical: "MISSING",
+      alert: true,
+    },
+    {
+      time: "23:14:00.450",
+      method: "GET",
+      url: "/categories/precision-measuring",
+      status: 200,
+      latency: "31ms",
+      canonical: "OK",
+      alert: false,
+    },
+    {
+      time: "23:13:58.210",
+      method: "GET",
+      url: "/robots.txt",
+      status: 200,
+      latency: "8ms",
+      canonical: "N/A",
+      alert: false,
+    },
+    {
+      time: "23:13:55.770",
+      method: "GET",
+      url: "/sitemap.xml",
+      status: 200,
+      latency: "42ms",
+      canonical: "OK",
+      alert: false,
+    },
+    {
+      time: "23:13:52.120",
+      method: "GET",
+      url: "/products/depth-gauge-pro",
+      status: 404,
+      latency: "12ms",
+      canonical: "ERROR",
+      alert: true,
+    },
   ];
 
+  if (!project)
+    return (
+      <main className="max-w-5xl mx-auto p-8">
+        <h1 className="text-3xl">Discoverability graph</h1>
+        <p>Connect a project and complete an analysis to view its graph.</p>
+      </main>
+    );
+  if (project)
+    return (
+      <main className="p-8 space-y-4">
+        <h1 className="text-3xl">Discoverability graph · {project.repo}</h1>
+        <p role="status">
+          {loadError ||
+            (snapshot
+              ? `Snapshot ${snapshot.deploymentId} · ${snapshot.complete ? "Complete" : "Partial"}`
+              : "Loading graph…")}
+        </p>
+        {snapshot && (
+          <GraphCanvas nodes={snapshot.nodes} edges={snapshot.edges} />
+        )}
+      </main>
+    );
   return (
     <div className="min-h-screen bg-bone-100 text-ink-900 flex flex-col font-sans">
       {/* Top Navigation */}
@@ -47,12 +148,17 @@ export default function CrawlerGraphPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-bone-300 pb-4">
             <div className="flex flex-col">
               <div className="flex items-center gap-2 font-mono text-sm text-bone-700">
-                <Link href="/" className="hover:text-ink-900 flex items-center gap-1.5 font-medium transition-colors">
+                <Link
+                  href="/"
+                  className="hover:text-ink-900 flex items-center gap-1.5 font-medium transition-colors"
+                >
                   <ArrowLeft className="w-4 h-4" />
                   <span>DASHBOARD</span>
                 </Link>
                 <span>/</span>
-                <span className="text-patina-600 font-bold uppercase tracking-wider">// SCREEN_04</span>
+                <span className="text-patina-600 font-bold uppercase tracking-wider">
+                  {"// SCREEN_04"}
+                </span>
               </div>
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 <h1 className="font-mono font-black text-2xl sm:text-3xl md:text-4xl text-ink-900 tracking-tight">
@@ -67,7 +173,9 @@ export default function CrawlerGraphPage() {
                   onClick={() => setFilterType("ALL")}
                   className={clsx(
                     "px-3 py-1.5 min-h-[36px] rounded-sm uppercase font-bold text-xs sm:text-sm transition-all",
-                    filterType === "ALL" ? "bg-ink-900 text-bone-100 shadow-sm" : "text-bone-700 hover:text-ink-900"
+                    filterType === "ALL"
+                      ? "bg-ink-900 text-bone-100 shadow-sm"
+                      : "text-bone-700 hover:text-ink-900",
                   )}
                 >
                   ALL
@@ -76,7 +184,9 @@ export default function CrawlerGraphPage() {
                   onClick={() => setFilterType("PAGES")}
                   className={clsx(
                     "px-3 py-1.5 min-h-[36px] rounded-sm uppercase font-bold text-xs sm:text-sm transition-all",
-                    filterType === "PAGES" ? "bg-ink-900 text-bone-100 shadow-sm" : "text-bone-700 hover:text-ink-900"
+                    filterType === "PAGES"
+                      ? "bg-ink-900 text-bone-100 shadow-sm"
+                      : "text-bone-700 hover:text-ink-900",
                   )}
                 >
                   PAGES
@@ -85,7 +195,9 @@ export default function CrawlerGraphPage() {
                   onClick={() => setFilterType("ERRORS")}
                   className={clsx(
                     "px-3 py-1.5 min-h-[36px] rounded-sm uppercase font-bold text-xs sm:text-sm transition-all",
-                    filterType === "ERRORS" ? "bg-ember-600 text-bone-100 shadow-sm" : "text-bone-700 hover:text-ink-900"
+                    filterType === "ERRORS"
+                      ? "bg-ember-600 text-bone-100 shadow-sm"
+                      : "text-bone-700 hover:text-ink-900",
                   )}
                 >
                   IMPACTED
@@ -116,7 +228,8 @@ export default function CrawlerGraphPage() {
                 <div
                   className="absolute inset-0 opacity-15 pointer-events-none"
                   style={{
-                    backgroundImage: "radial-gradient(#6E6353 1px, transparent 1px)",
+                    backgroundImage:
+                      "radial-gradient(#6E6353 1px, transparent 1px)",
                     backgroundSize: "24px 24px",
                   }}
                 />
@@ -176,68 +289,207 @@ export default function CrawlerGraphPage() {
 
                   {/* Nodes */}
                   {/* 1. Root Node (Pulsing node-active) */}
-                  <g className="node-active cursor-pointer" transform="translate(120, 190)">
-                    <circle r="24" fill="#100E0C" stroke="#4FA695" strokeWidth="3" />
-                    <text textAnchor="middle" dy="4" fill="#F4EDE1" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <g
+                    className="node-active cursor-pointer"
+                    transform="translate(120, 190)"
+                  >
+                    <circle
+                      r="24"
+                      fill="#100E0C"
+                      stroke="#4FA695"
+                      strokeWidth="3"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      fill="#F4EDE1"
+                      fontSize="11"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                    >
                       ROOT
                     </text>
                   </g>
-                  <text x="120" y="230" textAnchor="middle" fill="#100E0C" fontSize="12" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text
+                    x="120"
+                    y="230"
+                    textAnchor="middle"
+                    fill="#100E0C"
+                    fontSize="12"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                  >
                     / (Homepage)
                   </text>
 
                   {/* 2. Category Hub Node */}
-                  <g className="cursor-pointer" transform="translate(280, 100)" onClick={() => setSelectedNode("node-cat")}>
-                    <circle r="20" fill="#4FA695" stroke="#100E0C" strokeWidth="2" />
-                    <text textAnchor="middle" dy="4" fill="#F4EDE1" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <g
+                    className="cursor-pointer"
+                    transform="translate(280, 100)"
+                    onClick={() => setSelectedNode("node-cat")}
+                  >
+                    <circle
+                      r="20"
+                      fill="#4FA695"
+                      stroke="#100E0C"
+                      strokeWidth="2"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      fill="#F4EDE1"
+                      fontSize="11"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                    >
                       CAT
                     </text>
                   </g>
-                  <text x="280" y="136" textAnchor="middle" fill="#100E0C" fontSize="12" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text
+                    x="280"
+                    y="136"
+                    textAnchor="middle"
+                    fill="#100E0C"
+                    fontSize="12"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                  >
                     /categories/*
                   </text>
 
                   {/* 3. Product Template Emitter Node (Root Cause Emitter) */}
-                  <g className="cursor-pointer" transform="translate(280, 190)" onClick={() => setSelectedNode("node-emitter")}>
-                    <rect x="-28" y="-20" width="56" height="40" fill="#C23F10" stroke="#100E0C" strokeWidth="2" rx="3" />
-                    <text textAnchor="middle" dy="4" fill="#F4EDE1" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <g
+                    className="cursor-pointer"
+                    transform="translate(280, 190)"
+                    onClick={() => setSelectedNode("node-emitter")}
+                  >
+                    <rect
+                      x="-28"
+                      y="-20"
+                      width="56"
+                      height="40"
+                      fill="#C23F10"
+                      stroke="#100E0C"
+                      strokeWidth="2"
+                      rx="3"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      fill="#F4EDE1"
+                      fontSize="11"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                    >
                       EMITTER
                     </text>
                   </g>
-                  <text x="280" y="226" textAnchor="middle" fill="#C23F10" fontSize="12" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text
+                    x="280"
+                    y="226"
+                    textAnchor="middle"
+                    fill="#C23F10"
+                    fontSize="12"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                  >
                     ProductPage.tsx:184
                   </text>
 
                   {/* 4. Sitemap Node */}
                   <g className="cursor-pointer" transform="translate(280, 280)">
-                    <circle r="18" fill="#D6CBB8" stroke="#6E6353" strokeWidth="2" />
-                    <text textAnchor="middle" dy="4" fill="#100E0C" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold">
+                    <circle
+                      r="18"
+                      fill="#D6CBB8"
+                      stroke="#6E6353"
+                      strokeWidth="2"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      fill="#100E0C"
+                      fontSize="11"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                    >
                       XML
                     </text>
                   </g>
-                  <text x="280" y="314" textAnchor="middle" fill="#6E6353" fontSize="12" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text
+                    x="280"
+                    y="314"
+                    textAnchor="middle"
+                    fill="#6E6353"
+                    fontSize="12"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                  >
                     /sitemap.xml
                   </text>
 
                   {/* 5. Caliper Target Node */}
-                  <g className="cursor-pointer" transform="translate(460, 140)" onClick={() => setSelectedNode("node-product")}>
-                    <circle r="22" fill="#2A150C" stroke="#C23F10" strokeWidth="2.5" />
-                    <text textAnchor="middle" dy="4" fill="#F26A2E" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <g
+                    className="cursor-pointer"
+                    transform="translate(460, 140)"
+                    onClick={() => setSelectedNode("node-product")}
+                  >
+                    <circle
+                      r="22"
+                      fill="#2A150C"
+                      stroke="#C23F10"
+                      strokeWidth="2.5"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      fill="#F26A2E"
+                      fontSize="11"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                    >
                       PROD
                     </text>
                   </g>
-                  <text x="460" y="178" textAnchor="middle" fill="#C23F10" fontSize="12" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text
+                    x="460"
+                    y="178"
+                    textAnchor="middle"
+                    fill="#C23F10"
+                    fontSize="12"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                  >
                     /products/caliper (MISSING CANONICAL)
                   </text>
 
                   {/* 6. Broken 404 Node */}
                   <g className="cursor-pointer" transform="translate(460, 240)">
-                    <circle r="18" fill="#C23F10" stroke="#100E0C" strokeWidth="2" />
-                    <text textAnchor="middle" dy="4" fill="#F4EDE1" fontSize="11" fontFamily="JetBrains Mono" fontWeight="bold">
+                    <circle
+                      r="18"
+                      fill="#C23F10"
+                      stroke="#100E0C"
+                      strokeWidth="2"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="4"
+                      fill="#F4EDE1"
+                      fontSize="11"
+                      fontFamily="JetBrains Mono"
+                      fontWeight="bold"
+                    >
                       404
                     </text>
                   </g>
-                  <text x="460" y="274" textAnchor="middle" fill="#C23F10" fontSize="12" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text
+                    x="460"
+                    y="274"
+                    textAnchor="middle"
+                    fill="#C23F10"
+                    fontSize="12"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                  >
                     /products/depth-gauge (404)
                   </text>
                 </svg>
@@ -261,7 +513,8 @@ export default function CrawlerGraphPage() {
                 </div>
 
                 <div className="text-bone-700 text-xs sm:text-sm">
-                  TOTAL DISCOVERED: <strong className="text-ink-900 font-bold">142 URLS</strong>
+                  TOTAL DISCOVERED:{" "}
+                  <strong className="text-ink-900 font-bold">142 URLS</strong>
                 </div>
               </div>
             </div>
@@ -279,20 +532,36 @@ export default function CrawlerGraphPage() {
 
                 <div className="grid grid-cols-2 gap-2.5 text-xs">
                   <div className="bg-bone-300/40 p-2.5 rounded-sm border border-bone-300">
-                    <span className="text-xs text-bone-700 block font-medium">DEPTH LEVEL</span>
-                    <strong className="text-ink-900 text-base sm:text-lg font-black">3 HOPS</strong>
+                    <span className="text-xs text-bone-700 block font-medium">
+                      DEPTH LEVEL
+                    </span>
+                    <strong className="text-ink-900 text-base sm:text-lg font-black">
+                      3 HOPS
+                    </strong>
                   </div>
                   <div className="bg-bone-300/40 p-2.5 rounded-sm border border-bone-300">
-                    <span className="text-xs text-bone-700 block font-medium">HTTP 200 RATE</span>
-                    <strong className="text-patina-600 text-base sm:text-lg font-black">98.6%</strong>
+                    <span className="text-xs text-bone-700 block font-medium">
+                      HTTP 200 RATE
+                    </span>
+                    <strong className="text-patina-600 text-base sm:text-lg font-black">
+                      98.6%
+                    </strong>
                   </div>
                   <div className="bg-bone-300/40 p-2.5 rounded-sm border border-bone-300">
-                    <span className="text-xs text-bone-700 block font-medium">ORPHAN NODES</span>
-                    <strong className="text-ember-600 text-base sm:text-lg font-black">0</strong>
+                    <span className="text-xs text-bone-700 block font-medium">
+                      ORPHAN NODES
+                    </span>
+                    <strong className="text-ember-600 text-base sm:text-lg font-black">
+                      0
+                    </strong>
                   </div>
                   <div className="bg-bone-300/40 p-2.5 rounded-sm border border-bone-300">
-                    <span className="text-xs text-bone-700 block font-medium">AVG LATENCY</span>
-                    <strong className="text-ink-900 text-base sm:text-lg font-black">22ms</strong>
+                    <span className="text-xs text-bone-700 block font-medium">
+                      AVG LATENCY
+                    </span>
+                    <strong className="text-ink-900 text-base sm:text-lg font-black">
+                      22ms
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -317,23 +586,27 @@ export default function CrawlerGraphPage() {
                         "p-2.5 rounded-sm border text-xs sm:text-sm flex flex-col gap-1.5 transition-all",
                         log.alert
                           ? "bg-ember-600/10 border-ember-600/30 text-ink-900"
-                          : "bg-bone-300/30 border-bone-300 text-bone-700"
+                          : "bg-bone-300/30 border-bone-300 text-bone-700",
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-bone-700 font-bold text-xs">{log.time}</span>
+                        <span className="text-bone-700 font-bold text-xs">
+                          {log.time}
+                        </span>
                         <div className="flex items-center gap-1.5">
                           <span
                             className={clsx(
                               "px-2 py-0.5 rounded-sm font-bold text-xs",
                               log.status === 200
                                 ? "bg-patina-400/20 text-patina-600"
-                                : "bg-ember-600 text-bone-100"
+                                : "bg-ember-600 text-bone-100",
                             )}
                           >
                             {log.status} {log.status === 200 ? "OK" : "404"}
                           </span>
-                          <span className="text-xs text-bone-700 font-semibold">{log.latency}</span>
+                          <span className="text-xs text-bone-700 font-semibold">
+                            {log.latency}
+                          </span>
                         </div>
                       </div>
                       <div className="truncate font-semibold text-ink-900 text-xs sm:text-sm">

@@ -50,7 +50,11 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/",
         title: "Acme Industrial Instruments · Home",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Organization", "WebSite"] },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Organization", "WebSite"],
+        },
       },
       {
         id: "node_prod_caliper",
@@ -59,7 +63,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/products/digital-micrometer-caliper",
         title: "Digital Micrometer Caliper 0.01mm",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_prod_oscilloscope",
@@ -68,7 +77,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/products/precision-bench-oscilloscope",
         title: "Precision Bench Oscilloscope 200MHz",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_prod_multimeter",
@@ -77,7 +91,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/products/true-rms-digital-multimeter",
         title: "True-RMS Digital Multimeter 6000 Count",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_prod_thermometer",
@@ -86,7 +105,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/products/infrared-thermal-imager",
         title: "Infrared Thermal Imager -20 to 550°C",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_blog_calibration",
@@ -95,7 +119,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/blog/how-to-calibrate-micrometers",
         title: "How to Calibrate Digital Micrometers in Lab Environments",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Article"], templateName: "BlogPost.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Article"],
+          templateName: "BlogPost.tsx",
+        },
       },
       {
         id: "node_blog_measurement",
@@ -104,7 +133,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/blog/high-frequency-measurement-guide",
         title: "High Frequency Signal Measurement & Probe Grounding",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Article"], templateName: "BlogPost.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Article"],
+          templateName: "BlogPost.tsx",
+        },
       },
       {
         id: "node_docs_api",
@@ -113,7 +147,12 @@ export const DEMO_SCENARIO_183: ScenarioData = {
         key: "/docs/calibration-api",
         title: "Lab Instrument Calibration API Reference",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["TechArticle"], templateName: "DocPage.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["TechArticle"],
+          templateName: "DocPage.tsx",
+        },
       },
       // Templates
       {
@@ -155,18 +194,78 @@ export const DEMO_SCENARIO_183: ScenarioData = {
       },
     ],
     edges: [
-      { id: "e1", fromNodeId: "node_home", toNodeId: "node_prod_caliper", kind: "links_to" },
-      { id: "e2", fromNodeId: "node_home", toNodeId: "node_prod_oscilloscope", kind: "links_to" },
-      { id: "e3", fromNodeId: "node_home", toNodeId: "node_blog_calibration", kind: "links_to" },
-      { id: "e4", fromNodeId: "node_prod_caliper", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e5", fromNodeId: "node_prod_oscilloscope", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e6", fromNodeId: "node_prod_multimeter", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e7", fromNodeId: "node_prod_thermometer", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e8", fromNodeId: "node_blog_calibration", toNodeId: "tmpl_blog", kind: "renders_from" },
-      { id: "e9", fromNodeId: "node_blog_measurement", toNodeId: "tmpl_blog", kind: "renders_from" },
-      { id: "e10", fromNodeId: "node_prod_caliper", toNodeId: "schema_product", kind: "has_schema" },
-      { id: "e11", fromNodeId: "node_prod_oscilloscope", toNodeId: "schema_product", kind: "has_schema" },
-      { id: "e12", fromNodeId: "node_blog_calibration", toNodeId: "schema_article", kind: "has_schema" },
+      {
+        id: "e1",
+        fromNodeId: "node_home",
+        toNodeId: "node_prod_caliper",
+        kind: "links_to",
+      },
+      {
+        id: "e2",
+        fromNodeId: "node_home",
+        toNodeId: "node_prod_oscilloscope",
+        kind: "links_to",
+      },
+      {
+        id: "e3",
+        fromNodeId: "node_home",
+        toNodeId: "node_blog_calibration",
+        kind: "links_to",
+      },
+      {
+        id: "e4",
+        fromNodeId: "node_prod_caliper",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e5",
+        fromNodeId: "node_prod_oscilloscope",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e6",
+        fromNodeId: "node_prod_multimeter",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e7",
+        fromNodeId: "node_prod_thermometer",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e8",
+        fromNodeId: "node_blog_calibration",
+        toNodeId: "tmpl_blog",
+        kind: "renders_from",
+      },
+      {
+        id: "e9",
+        fromNodeId: "node_blog_measurement",
+        toNodeId: "tmpl_blog",
+        kind: "renders_from",
+      },
+      {
+        id: "e10",
+        fromNodeId: "node_prod_caliper",
+        toNodeId: "schema_product",
+        kind: "has_schema",
+      },
+      {
+        id: "e11",
+        fromNodeId: "node_prod_oscilloscope",
+        toNodeId: "schema_product",
+        kind: "has_schema",
+      },
+      {
+        id: "e12",
+        fromNodeId: "node_blog_calibration",
+        toNodeId: "schema_article",
+        kind: "has_schema",
+      },
     ],
   },
 };
@@ -219,7 +318,8 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         file: "src/app/products/[slug]/page.tsx",
         line: 184,
         component: "ProductMetadata",
-        snippet: "alternates: { canonical: `https://store.acme.com/products/${params.slug}` }",
+        snippet:
+          "alternates: { canonical: `https://store.acme.com/products/${params.slug}` }",
       },
       status: "OPEN",
     },
@@ -245,7 +345,8 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         file: "src/components/blog/ArticleSchema.tsx",
         line: 42,
         component: "BlogJsonLd",
-        snippet: "<script type=\"application/ld+json\" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />",
+        snippet:
+          '<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />',
       },
       status: "OPEN",
     },
@@ -262,7 +363,11 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/",
         title: "Acme Industrial Instruments · Home",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["Organization", "WebSite"] },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["Organization", "WebSite"],
+        },
       },
       {
         id: "node_prod_caliper",
@@ -271,7 +376,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/products/digital-micrometer-caliper",
         title: "Digital Micrometer Caliper 0.01mm",
         health: "REGRESSION",
-        attrs: { hasCanonical: false, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: false,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_prod_oscilloscope",
@@ -280,7 +390,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/products/precision-bench-oscilloscope",
         title: "Precision Bench Oscilloscope 200MHz",
         health: "REGRESSION",
-        attrs: { hasCanonical: false, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: false,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_prod_multimeter",
@@ -289,7 +404,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/products/true-rms-digital-multimeter",
         title: "True-RMS Digital Multimeter 6000 Count",
         health: "REGRESSION",
-        attrs: { hasCanonical: false, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: false,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_prod_thermometer",
@@ -298,7 +418,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/products/infrared-thermal-imager",
         title: "Infrared Thermal Imager -20 to 550°C",
         health: "REGRESSION",
-        attrs: { hasCanonical: false, isNoindexed: false, schemaTypes: ["Product"], templateName: "ProductPage.tsx" },
+        attrs: {
+          hasCanonical: false,
+          isNoindexed: false,
+          schemaTypes: ["Product"],
+          templateName: "ProductPage.tsx",
+        },
       },
       {
         id: "node_blog_calibration",
@@ -307,7 +432,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/blog/how-to-calibrate-micrometers",
         title: "How to Calibrate Digital Micrometers in Lab Environments",
         health: "DEGRADED",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: [], templateName: "BlogPost.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: [],
+          templateName: "BlogPost.tsx",
+        },
       },
       {
         id: "node_blog_measurement",
@@ -316,7 +446,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/blog/high-frequency-measurement-guide",
         title: "High Frequency Signal Measurement & Probe Grounding",
         health: "DEGRADED",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: [], templateName: "BlogPost.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: [],
+          templateName: "BlogPost.tsx",
+        },
       },
       {
         id: "node_docs_api",
@@ -325,7 +460,12 @@ export const DEMO_SCENARIO_184: ScenarioData = {
         key: "/docs/calibration-api",
         title: "Lab Instrument Calibration API Reference",
         health: "PASS",
-        attrs: { hasCanonical: true, isNoindexed: false, schemaTypes: ["TechArticle"], templateName: "DocPage.tsx" },
+        attrs: {
+          hasCanonical: true,
+          isNoindexed: false,
+          schemaTypes: ["TechArticle"],
+          templateName: "DocPage.tsx",
+        },
       },
       {
         id: "tmpl_product",
@@ -365,17 +505,72 @@ export const DEMO_SCENARIO_184: ScenarioData = {
       },
     ],
     edges: [
-      { id: "e1", fromNodeId: "node_home", toNodeId: "node_prod_caliper", kind: "links_to" },
-      { id: "e2", fromNodeId: "node_home", toNodeId: "node_prod_oscilloscope", kind: "links_to" },
-      { id: "e3", fromNodeId: "node_home", toNodeId: "node_blog_calibration", kind: "links_to" },
-      { id: "e4", fromNodeId: "node_prod_caliper", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e5", fromNodeId: "node_prod_oscilloscope", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e6", fromNodeId: "node_prod_multimeter", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e7", fromNodeId: "node_prod_thermometer", toNodeId: "tmpl_product", kind: "renders_from" },
-      { id: "e8", fromNodeId: "node_blog_calibration", toNodeId: "tmpl_blog", kind: "renders_from" },
-      { id: "e9", fromNodeId: "node_blog_measurement", toNodeId: "tmpl_blog", kind: "renders_from" },
-      { id: "e10", fromNodeId: "node_prod_caliper", toNodeId: "schema_product", kind: "has_schema" },
-      { id: "e11", fromNodeId: "node_prod_oscilloscope", toNodeId: "schema_product", kind: "has_schema" },
+      {
+        id: "e1",
+        fromNodeId: "node_home",
+        toNodeId: "node_prod_caliper",
+        kind: "links_to",
+      },
+      {
+        id: "e2",
+        fromNodeId: "node_home",
+        toNodeId: "node_prod_oscilloscope",
+        kind: "links_to",
+      },
+      {
+        id: "e3",
+        fromNodeId: "node_home",
+        toNodeId: "node_blog_calibration",
+        kind: "links_to",
+      },
+      {
+        id: "e4",
+        fromNodeId: "node_prod_caliper",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e5",
+        fromNodeId: "node_prod_oscilloscope",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e6",
+        fromNodeId: "node_prod_multimeter",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e7",
+        fromNodeId: "node_prod_thermometer",
+        toNodeId: "tmpl_product",
+        kind: "renders_from",
+      },
+      {
+        id: "e8",
+        fromNodeId: "node_blog_calibration",
+        toNodeId: "tmpl_blog",
+        kind: "renders_from",
+      },
+      {
+        id: "e9",
+        fromNodeId: "node_blog_measurement",
+        toNodeId: "tmpl_blog",
+        kind: "renders_from",
+      },
+      {
+        id: "e10",
+        fromNodeId: "node_prod_caliper",
+        toNodeId: "schema_product",
+        kind: "has_schema",
+      },
+      {
+        id: "e11",
+        fromNodeId: "node_prod_oscilloscope",
+        toNodeId: "schema_product",
+        kind: "has_schema",
+      },
     ],
   },
 };
@@ -384,7 +579,8 @@ export const DEMO_SCENARIO_185: ScenarioData = {
   deployNumber: 185,
   sha: "e3d10fa",
   ref: "refs/heads/main",
-  commitMsg: "fix(discoverability): restore canonical generator in ProductMetadata (#185)",
+  commitMsg:
+    "fix(discoverability): restore canonical generator in ProductMetadata (#185)",
   author: "searchops-bot[bot]",
   status: "REMEDIATED",
   createdAt: "2026-08-20T22:05:00Z",
@@ -410,7 +606,8 @@ export const DEMO_SCENARIO_185: ScenarioData = {
       confidence: 96,
       lens: "search",
       title: "Canonical tags stripped across 127 product routes",
-      description: "Resolved via Auto-Fix PR #185. Canonical tag generation restored.",
+      description:
+        "Resolved via Auto-Fix PR #185. Canonical tag generation restored.",
       evidence: {
         pagesAffected: 127,
         firstBadDeploy: "#184",

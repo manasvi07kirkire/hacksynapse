@@ -14,24 +14,31 @@ export interface TierClassification {
 const TIER_A_ALLOWLIST: FindingType[] = [
   "CANONICAL_STRIPPED",
   "SCHEMA_REMOVED",
-  "SCHEMA_INVALID",
+  "NOINDEX_FLIPPED",
   "LLMSTXT_INVALID",
 ];
 
 const TIER_B_TYPES: FindingType[] = [
-  "NOINDEX_FLIPPED",
+  "SCHEMA_INVALID",
+  "ORPHAN_PAGE",
+  "TITLE_MISSING",
+  "META_DESCRIPTION_MISSING",
+  "DUPLICATE_TITLE",
   "ORPHAN_PAGE_CREATED",
   "SITEMAP_INCONSISTENCY",
 ];
 
-export function classifyRemediationTier(findingType: FindingType): TierClassification {
+export function classifyRemediationTier(
+  findingType: FindingType,
+): TierClassification {
   if (TIER_A_ALLOWLIST.includes(findingType)) {
     return {
       tier: "TIER_A",
       label: "AUTO-FIX",
       colorToken: "patina",
       isAutoFixable: true,
-      description: "Declarative, template-safe change. SearchOps can automatically validate and open a ready PR.",
+      description:
+        "Declarative, template-safe change. SearchOps can automatically validate and open a ready PR.",
     };
   }
 
@@ -41,7 +48,8 @@ export function classifyRemediationTier(findingType: FindingType): TierClassific
       label: "DRAFT PR",
       colorToken: "marigold",
       isAutoFixable: false,
-      description: "Structural or routing change. Opened as a Draft PR awaiting human engineering review.",
+      description:
+        "Structural or routing change. Opened as a Draft PR awaiting human engineering review.",
     };
   }
 
@@ -50,6 +58,7 @@ export function classifyRemediationTier(findingType: FindingType): TierClassific
     label: "APPROVAL ONLY",
     colorToken: "ember",
     isAutoFixable: false,
-    description: "High-risk URL, redirect, or content architecture change. Recommended with manual approval required.",
+    description:
+      "High-risk URL, redirect, or content architecture change. Recommended with manual approval required.",
   };
 }

@@ -32,7 +32,7 @@ export const Gauge: React.FC<GaugeProps> = ({
   }, [value]);
 
   // Score threshold mapping
-  let strokeColor = "#4FA695";       // patina-400 — PASS
+  let strokeColor = "#4FA695"; // patina-400 — PASS
   let statusColor = "text-patina-400";
   let statusBg = "bg-patina-tint/60 border-patina-400/40";
   let statusText = "PASS · OPTIMIZED";
@@ -69,7 +69,7 @@ export const Gauge: React.FC<GaugeProps> = ({
     <div
       className={clsx(
         "relative flex flex-col items-center justify-between p-5 sm:p-6 bg-ink-800 border border-ink-700 rounded-md transition-all duration-200 w-full shadow-card",
-        className
+        className,
       )}
     >
       {/* Header Eyebrow */}
@@ -87,7 +87,7 @@ export const Gauge: React.FC<GaugeProps> = ({
                 ? "text-ember-400 bg-ember-tint border-ember-600/40"
                 : delta > 0
                   ? "text-patina-400 bg-patina-tint border-patina-600/40"
-                  : "text-bone-500 bg-ink-850 border-ink-700"
+                  : "text-bone-500 bg-ink-850 border-ink-700",
             )}
           >
             {delta > 0 ? `+${delta}` : delta} PTS
@@ -103,7 +103,9 @@ export const Gauge: React.FC<GaugeProps> = ({
         >
           {/* Background Track */}
           <circle
-            cx={center} cy={center} r={radius}
+            cx={center}
+            cy={center}
+            r={radius}
             fill="none"
             stroke="#15110D"
             strokeWidth={strokeWidth}
@@ -114,7 +116,9 @@ export const Gauge: React.FC<GaugeProps> = ({
 
           {/* Value Arc */}
           <circle
-            cx={center} cy={center} r={radius}
+            cx={center}
+            cy={center}
+            r={radius}
             fill="none"
             stroke={strokeColor}
             strokeWidth={strokeWidth}
@@ -122,7 +126,10 @@ export const Gauge: React.FC<GaugeProps> = ({
             strokeDashoffset={dashOffset}
             strokeLinecap="round"
             transform={`rotate(${startAngle} ${center} ${center})`}
-            style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.2, 0.6, 0.2, 1), stroke 0.3s ease" }}
+            style={{
+              transition:
+                "stroke-dashoffset 0.8s cubic-bezier(0.2, 0.6, 0.2, 1), stroke 0.3s ease",
+            }}
           />
 
           {/* Tick marks */}
@@ -167,10 +174,13 @@ export const Gauge: React.FC<GaugeProps> = ({
         {subtitle && (
           <p className="font-sans text-sm text-bone-400">{subtitle}</p>
         )}
-        <div className={clsx(
-          "flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-sm border",
-          statusColor, statusBg
-        )}>
+        <div
+          className={clsx(
+            "flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-sm border",
+            statusColor,
+            statusBg,
+          )}
+        >
           <StatusIcon className="w-3.5 h-3.5 shrink-0" />
           <span>{statusText}</span>
         </div>

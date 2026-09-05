@@ -1,76 +1,55 @@
-# SearchOps — Discoverability CI/CD for the Dual-Audience Web
+# SearchOps
 
-> **The discoverability CI/CD layer for search crawlers and AI answer engines.**  
-> Watches every deployment through two lenses, detects when a code change silently breaks machine-legibility, traces the break down to the exact `file:line`, and ships autonomous tiered fixes.
+SearchOps watches deployed discoverability signals through search and AI-answer lenses. It records deterministic regressions, source evidence and versioned scores, then opens reviewed remediation or SEO pull requests. It never merges a PR.
 
----
+The backend is prepared for a bounded static-site demo. Local proof uses real PostgreSQL/HTTP plus faithful GitHub/OpenRouter fakes; live integration and broad production readiness are not claimed. See [current status](PROJECT_STATUS.md) and [supported architecture](PRODUCTION_BACKEND_VISION.md).
 
-## ⚡ Core Value Proposition
+## Run the local verification demo
 
-Every modern website is read by two machine audiences:
-1. **Search Crawlers** (Googlebot, Bingbot)
-2. **AI Answer Engines** (ChatGPT Search, Perplexity, Google AI Overviews, Copilot)
+Use Node 22 LTS (the implementation was also tested on the provided Node 25.9.0 environment).
 
-A single deployment can silently break machine-legibility for either audience — a routing change drops canonical tags; a component refactor strips the structured JSON-LD entities an LLM needs to cite the page. SearchOps continuously watches deployments, computes dual-lens scores, and opens validated GitHub PRs.
-
----
-
-## 🛠️ Architecture & Features
-
-- **Dual-Lens Scoring**:
-  - **Search Crawler Health** (Canonical health, index directives, internal link graph)
-  - **AI-Answer Engine Citation-Readiness (GEO)** (Structured schema completeness, `llms.txt` validation, live citation-probability test)
-- **Deterministic Detection Engine**: 100% pure TypeScript rules engine. Zero hallucinations.
-- **AST Root Cause Attribution**: Signature matcher over git diffs pinpointing exact `file:line` (e.g., `ProductPage.tsx:184`).
-- **Live GEO Citation-Probability Test**: Evaluates fact grounding of AI answer engine responses in real time.
-- **Strict Remediation Tiers**:
-  - `● TIER A (Auto-Fix)`: Declarative, template-safe fixes (canonicals, schemas, metadata) with a 3-step automated validation gate.
-  - `▲ TIER B (Draft PR)`: Structural/template changes opened as Draft PRs for review.
-  - `■ TIER C (Approval Only)`: High-risk URL/redirect changes requiring manual human sign-off.
-- **Weathered-Metal Instrument UI**: Precision dark-first aesthetic (`#100E0C`), Fraunces serif display, Hanken Grotesk body, and Commit Mono tabular numbers.
-
----
-
-## 🚀 Quickstart & Local Setup
-
-### 1. Clone & Install Dependencies
-```bash
-git clone https://github.com/Parth-Gholap/Search-Ops.git
-cd Search-Ops
-npm install
+```sh
+npm ci
+npm test
+npm run test:legacy
+npm run demo
 ```
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Set your `OPENROUTER_API_KEY` (or leave empty to use the built-in deterministic demo fallback).
+The demo provisions a disposable PostgreSQL instance and exercises signed webhooks, concurrency, baseline/regression/recovery, PR replay, SEO and citation routes. It needs no external credentials and never uses your production database. Windows requires the standard PostgreSQL process/shutdown utilities available to the test process.
 
-### 3. Initialize Database & Seed Scenarios
-```bash
-npx prisma generate
-npx prisma db push
-npx -y tsx prisma/seed.ts
-```
+## Connect real services
 
-### 4. Run Development Server
-```bash
+Copy `.env.example` to `.env`, configure PostgreSQL/Supabase, GitHub App and an operator key. Configure OpenRouter only for requested model features. Then run:
+
+```sh
+npm run db:migrate
+npm run db:validate
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
----
+In a second terminal:
 
-## 🚢 Deployment on Vercel
+```sh
+npm run worker
+```
 
-1. Import the repository into [Vercel](https://vercel.com).
-2. Set the environment variable:
-   - `OPENROUTER_API_KEY`: Your OpenRouter API Key
-   - `DATABASE_URL`: `"file:./dev.db"`
-3. Deploy!
+Visit `/connect` to sign in and verify a project; `/watch` shows real deployment state. The original Field Manual scenarios remain labeled UI previews. The target must emit `X-SearchOps-Sha` with its full deployed SHA; otherwise analysis is visibly degraded. Set a page-to-source mapping such as `{"/":"index.html"}` for exact source remediation/SEO edits.
 
----
+Production API hosting and the persistent worker are separate processes. SQLite files from the original prototype must be retained/exported and imported into a new PostgreSQL database; do not point PostgreSQL migrations at SQLite or use destructive schema push as a production migration strategy.
 
-## 📜 License
-MIT License.
+## Verification and operations
+
+```sh
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run test:legacy
+npm run test:integration
+npm run db:validate
+npm audit --audit-level=moderate
+npm run build
+npm run test:smoke
+```
+
+[Demo runbook](docs/DEMO_REGRESSION.md) · [API contracts](docs/API_CONTRACTS.md) · [Migration/worker/incident guide](docs/OPERATIONS.md) · [Requirement traceability](PRODUCTION_WIRING_TRACKER.md) · [Initial audit](docs/BACKEND_AUDIT.md)

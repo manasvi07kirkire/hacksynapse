@@ -43,7 +43,9 @@ export interface ScanResult {
 /** Locations an extracted page can carry a suggestion against — used to reject ungrounded locations. */
 export function groundedLocations(content: AdvisorPageContent): string[] {
   const locations = ["title", "meta description"];
-  content.headings.h1.forEach((_, i) => locations.push(content.headings.h1.length === 1 ? "H1" : `H1 #${i + 1}`));
+  content.headings.h1.forEach((_, i) =>
+    locations.push(content.headings.h1.length === 1 ? "H1" : `H1 #${i + 1}`),
+  );
   content.headings.h2.forEach((_, i) => locations.push(`H2 #${i + 1}`));
   content.paragraphs.forEach((_, i) => locations.push(`paragraph ${i + 1}`));
   locations.push("internal links");

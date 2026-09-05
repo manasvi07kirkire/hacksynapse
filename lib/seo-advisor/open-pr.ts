@@ -1,38 +1,41 @@
 import { Suggestion } from "./types";
-
-// No GitHub App/Octokit integration exists in this codebase yet (lib/github does not exist —
-// even the shipped Watch pipeline's PR links are hardcoded strings, see generate-fix/route.ts).
-// This mirrors that same pattern until real Octokit wiring is added.
-const REPO = "acme-industries/precision-store";
-
+import { RepoContext, GitHubClient } from "../github/client";
+import { createBranchCommitAndPullRequest } from "../github/branch-commit";
 export interface OpenedPr {
   prUrl: string;
   prNumber: number;
   body: string;
 }
-
-export function buildPrBody(pageUrl: string, approved: Suggestion[]): string {
-  const items = approved
-    .map((s) => `- **${s.location}** (${s.type}): ${s.rationale}\n  \`${s.before || "(none)"}\` → \`${s.after}\``)
-    .join("\n");
-
-  return `## SEO Advisor: optimize ${pageUrl}
-
-### Applied suggestions (${approved.length})
-${items}
-
-### On-page relevance
-This is a topical-optimization suggestion set, not a ranking guarantee. Every change above is grounded in this page's real extracted content and the target keywords supplied at scan time.
-
----
-*Opened by SearchOps SEO Advisor — review required, never auto-merged.*`;
+export function buildPrBody(pageUrl: string, approved: Suggestion[]) {
+  return `SEO Advisor changes for ${pageUrl}.\n\n${approved.map((s) => `- ${s.type}: ${s.location}`).join("\n")}\n\nExact source and on-page static checks passed. Build not required for static HTML. Human review required; never auto-merged.`;
 }
-
-export function openPullRequest(pageUrl: string, approved: Suggestion[]): OpenedPr {
-  const prNumber = 200 + Math.floor(Math.random() * 100);
-  return {
-    prUrl: `https://github.com/${REPO}/pull/${prNumber}`,
-    prNumber,
-    body: buildPrBody(pageUrl, approved),
-  };
+export async function openPullRequest(
+  pageUrl: string,
+  approved: Suggestion[],
+  input?: {
+    project: RepoContext;
+    key: string;
+    baseSha: string;
+    baseBranch?: string;
+    path: string;
+    content: string;
+  },
+  gh?: GitHubClient,
+): Promise<OpenedPr> {
+  if (!input) throw new Error("Authorized source and repository are required");
+  const body = buildPrBody(pageUrl, approved);
+  const pr = await createBranchCommitAndPullRequest(
+    input.project,
+    {
+      key: input.key,
+      baseSha: input.baseSha,
+      baseBranch: input.baseBranch,
+      files: [{ path: input.path, content: input.content }],
+      title: "SEO Advisor: approved on-page suggestions",
+      body,
+      draft: true,
+    },
+    gh,
+  );
+  return { ...pr, body };
 }

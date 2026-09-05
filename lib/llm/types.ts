@@ -4,6 +4,7 @@ export interface LLMMessage {
 }
 
 export interface LLMCompletionOptions {
+  signal?: AbortSignal;
   temperature?: number;
   maxTokens?: number;
   jsonMode?: boolean;
