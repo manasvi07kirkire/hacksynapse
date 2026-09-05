@@ -4,11 +4,15 @@ import { useProject } from "../../components/ProjectAccess";
 export default function Connect() {
   const { refresh } = useProject();
   const [key, setKey] = useState("");
-  const [repo, setRepo] = useState("");
-  const [siteUrl, setUrl] = useState("");
+  const [repo, setRepo] = useState("Parth-Gholap/Demo-ops");
+  const [siteUrl, setUrl] = useState("https://demops.vercel.app");
   const [installId, setInstall] = useState("");
-  const [routes, setRoutes] = useState("/");
-  const [sourceMap, setMap] = useState('{"/":"index.html"}');
+  const [routes, setRoutes] = useState(
+    "/, /products, /products/demo-widget, /about, /docs",
+  );
+  const [sourceMap, setMap] = useState(
+    '{"":"/app/page.tsx","/products":"/app/products/page.tsx","/products/demo-widget":"/app/products/[slug]/page.tsx","/about":"/app/about/page.tsx","/docs":"/app/docs/page.tsx"}',
+  );
   const [message, setMessage] = useState("");
   async function submit(kind: "login" | "connect") {
     try {
@@ -33,7 +37,12 @@ export default function Connect() {
         },
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok)
+        throw new Error(
+          data.requestId
+            ? `${data.error} (request ${data.requestId})`
+            : data.error || "Request failed.",
+        );
       setKey("");
       setMessage(kind === "login" ? "Signed in." : "Project connected.");
       await refresh();

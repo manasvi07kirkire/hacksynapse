@@ -62,19 +62,27 @@ export function query<S extends z.ZodTypeAny>(
   return schema.parse(Object.fromEntries(params));
 }
 export async function rateLimit(key: string, limit = 60) {
-  const window = Math.floor(Date.now() / 60000);
-  const bucket = await db.rateBucket.upsert({
-    where: {
-      key: createHash("sha256").update(`${key}:${window}`).digest("hex"),
-    },
-    create: {
-      key: createHash("sha256").update(`${key}:${window}`).digest("hex"),
-      expiresAt: new Date((window + 2) * 60000),
-    },
-    update: { count: { increment: 1 } },
-  });
-  if (bucket.count > limit)
-    fail(429, "RATE_LIMITED", "Too many requests. Retry in one minute.");
+  try {
+    const window = Math.floor(Date.now() / 60000);
+    const bucket = await db.rateBucket.upsert({
+      where: {
+        key: createHash("sha256").update(`${key}:${window}`).digest("hex"),
+      },
+      create: {
+        key: createHash("sha256").update(`${key}:${window}`).digest("hex"),
+        expiresAt: new Date((window + 2) * 60000),
+      },
+      update: { count: { increment: 1 } },
+    });
+    if (bucket.count > limit)
+      fail(429, "RATE_LIMITED", "Too many requests. Retry in one minute.");
+  } catch (e) {
+    if (process.env.NODE_ENV === "production") throw e;
+    logEvent({
+      event: "rate_limit_skipped",
+      code: e instanceof Error ? e.message : "DATABASE_UNAVAILABLE",
+    });
+  }
 }
 export function api(
   handler: (req: Request, actor: Actor, requestId: string) => Promise<unknown>,
