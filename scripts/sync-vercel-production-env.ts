@@ -29,10 +29,12 @@ const productionSafe: Record<string, string> = {
   NEXT_PUBLIC_APP_URL: "https://searchops-vert.vercel.app",
 };
 
+const poolerUrl = vercelDatabaseUrl(env.DIRECT_URL || env.DATABASE_URL);
+
 const values: Record<string, string> = {
   ...productionSafe,
-  DIRECT_URL: env.DIRECT_URL,
-  DATABASE_URL: vercelDatabaseUrl(env.DIRECT_URL || env.DATABASE_URL),
+  DIRECT_URL: poolerUrl,
+  DATABASE_URL: poolerUrl,
   SEARCHOPS_API_KEY: env.SEARCHOPS_API_KEY,
   SEARCHOPS_PROJECT_KEYS: env.SEARCHOPS_PROJECT_KEYS || "{}",
   OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
