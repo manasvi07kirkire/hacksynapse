@@ -84,6 +84,27 @@ export function applySourceSuggestions(
           () => `<meta name="description" content="${value}">\n</head>`,
         );
       else fail(422, "UNSUPPORTED_SOURCE", "Source has no head element.");
+    } else if (location === "H1" && !before.trim()) {
+      if (extracted.headings.h1.length > 0)
+        fail(
+          409,
+          "SUGGESTION_CONTEXT_MISMATCH",
+          "Suggestion differs from exact source content.",
+        );
+      if (!/<body\b/i.test(after))
+        fail(422, "UNSUPPORTED_SOURCE", "Source has no body element.");
+      after = after.replace(
+        /(<body\b[^>]*>)/i,
+        (_match, open: string) => `${open}\n    <h1>${value}</h1>`,
+      );
+    } else if (location === "H1") {
+      const tags = after.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/gi) || [];
+      if (tags.length !== 1)
+        fail(422, "UNSUPPORTED_SOURCE", "Source H1 is ambiguous.");
+      after = after.replace(
+        tags[0],
+        () => `<h1>${value}</h1>`,
+      );
     } else {
       const old = escapeText(before);
       if (!old || after.split(old).length !== 2)

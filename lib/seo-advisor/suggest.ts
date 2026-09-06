@@ -12,7 +12,9 @@ export function locationValue(
   if (location === "H1")
     return content.headings.h1.length === 1
       ? content.headings.h1[0]
-      : undefined;
+      : content.headings.h1.length === 0
+        ? ""
+        : undefined;
   const h = /^(H[12]) #(\d+)$/.exec(location);
   if (h) return content.headings[h[1] === "H1" ? "h1" : "h2"][Number(h[2]) - 1];
   const p = /^paragraph (\d+)$/.exec(location);

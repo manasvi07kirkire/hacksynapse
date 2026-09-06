@@ -22,7 +22,8 @@ import {
 import { checkFacts } from "../lib/geo/citation-test";
 import { parseSuggestions } from "../lib/seo-advisor/suggest";
 import { extractHtmlContent } from "../lib/seo-advisor/extract-target";
-import { validateSelection } from "../lib/seo-advisor/source-apply";
+import { validateSelection, applySourceSuggestions } from "../lib/seo-advisor/source-apply";
+import { generateHeuristicSuggestions } from "../lib/seo-advisor/suggest";
 import { OpenRouterClient } from "../lib/llm/openrouter";
 import {
   FREE_MODELS_CHAIN,
@@ -439,6 +440,28 @@ test("SEO selection ownership, duplicate/overlap and grounding", () => {
       content,
     ),
   );
+});
+test("SEO apply inserts missing H1 into static HTML source", () => {
+  const source = `<!doctype html><html><head><title>HealthCart</title></head><body><div id="root"></div></body></html>`;
+  const content = extractHtmlContent("https://healthcart-bice.vercel.app/", source);
+  const suggestions = generateHeuristicSuggestions({
+    pageUrl: "https://healthcart-bice.vercel.app/",
+    content,
+    targetKeywords: ["health"],
+  });
+  assert.equal(suggestions.length, 1);
+  assert.equal(suggestions[0].location, "H1");
+  assert.equal(suggestions[0].before, "");
+  const applied = applySourceSuggestions(
+    "index.html",
+    "https://healthcart-bice.vercel.app/",
+    source,
+    content,
+    ["health"],
+    suggestions,
+  );
+  assert.match(applied.source, /<h1>Health<\/h1>/);
+  assert.equal(applied.validation.checks.find((c) => c.name === "No duplicate H1")?.passed, true);
 });
 test("LLM absence fails closed; malformed output fails", async () => {
   delete process.env.OPENROUTER_API_KEY;
