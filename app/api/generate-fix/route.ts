@@ -75,10 +75,34 @@ export const POST = api(
           },
           orderBy: { deployNumber: "desc" },
         });
+        const latestVerified = await db.deployment.findFirst({
+          where: {
+            projectId: project.id,
+            revisionVerified: true,
+            status: { in: ["HEALTHY", "REGRESSION", "DEGRADED"] },
+          },
+          orderBy: { deployNumber: "desc" },
+        });
+        const repoHead = await github.head(project);
         if (
-          latest?.id !== f.deploymentId ||
-          (await github.head(project)) !== f.deployment.sha
+          latest?.id !== f.deploymentId &&
+          latestVerified?.id !== f.deploymentId
         )
+          fail(
+            409,
+            "STALE_FINDING",
+            "Analyze the current repository revision first.",
+          );
+        const baseSha =
+          repoHead === f.deployment.sha
+            ? f.deployment.sha
+            : f.deployment.revisionVerified &&
+                ["SITEMAP_INCONSISTENCY", "LLMSTXT_INVALID"].includes(
+                  finding.type,
+                )
+              ? repoHead
+              : f.deployment.sha;
+        if (repoHead !== baseSha)
           fail(
             409,
             "STALE_FINDING",
@@ -90,7 +114,7 @@ export const POST = api(
               findingId: f.id,
               approvedAt: { not: null },
               approvalActor: { not: null },
-              baseSha: f.deployment.sha,
+              baseSha,
             },
           });
           if (!approval)
@@ -143,7 +167,7 @@ export const POST = api(
           github,
           project,
           path,
-          f.deployment.sha,
+          baseSha,
           optionalSource,
         );
         const prior = previous
@@ -163,7 +187,7 @@ export const POST = api(
         });
         const pr = await createBranchCommitAndPullRequest(project, {
           key,
-          baseSha: f.deployment.sha,
+          baseSha,
           files: [{ path, content: patch.content! }],
           title: patch.prTitle,
           body: patch.prBody,
@@ -175,7 +199,7 @@ export const POST = api(
           create: {
             operationKey: key,
             findingId: f.id,
-            baseSha: f.deployment.sha,
+            baseSha,
             tier: patch.tier,
             action: patch.actionSummary,
             patchDiff: patch.diff,
