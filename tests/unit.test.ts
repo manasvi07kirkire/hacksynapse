@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHmac, generateKeyPairSync } from "node:crypto";
 import { persistentFindings } from "../lib/detect/persistent-findings";
 import { productionRequirements } from "../lib/server/production";
-import { isPublicAddress, normalizeUrl } from "../lib/crawler/safe-fetch";
+import { isPublicAddress, normalizeUrl, pickPinnedAddress } from "../lib/crawler/safe-fetch";
 import { verifyWebhook } from "../lib/github/webhook-verify";
 import { parseHtml } from "../lib/extract/html-parser";
 import { parseSitemapXml } from "../lib/extract/sitemap-parser";
@@ -24,6 +24,11 @@ import { parseSuggestions } from "../lib/seo-advisor/suggest";
 import { extractHtmlContent } from "../lib/seo-advisor/extract-target";
 import { validateSelection } from "../lib/seo-advisor/source-apply";
 import { OpenRouterClient } from "../lib/llm/openrouter";
+import {
+  FREE_MODELS_CHAIN,
+  isFreeModel,
+  resolveFreeModelChain,
+} from "../lib/llm/free-models";
 import { authenticate, equalSecret, sessionCookie } from "../lib/auth/api-key";
 import { jsonBody, query } from "../lib/server/api";
 import { z } from "zod";
@@ -59,11 +64,14 @@ for (const [type, badHtml] of [
 test("production preflight rejects missing services, weak secrets and insecure connections", () => {
   const saved = { ...process.env };
   try {
-    Object.assign(process.env, { NODE_ENV: "production", SEARCHOPS_API_KEY: "test-operator-key-at-least-32-characters", SEARCHOPS_PROJECT_KEYS: "{}", SEARCHOPS_LOCAL_DEMO: "false", SEARCHOPS_ALLOW_PRIVATE_CRAWL: "false", SEARCHOPS_ALLOW_PAT: "false", ALLOW_LLM_FALLBACK: "false", USE_PLAYWRIGHT: "false", DATABASE_URL: "postgresql://u:p@db.example/db?sslmode=require", DIRECT_URL: "postgresql://u:p@db.example/db?sslmode=require", GITHUB_APP_ID: "42", GITHUB_APP_SLUG: "test-app", GITHUB_APP_WEBHOOK_SECRET: "s".repeat(32), OPENROUTER_API_KEY: "test", OPENROUTER_MODEL: "test-model", NEXT_PUBLIC_APP_URL: "https://app.example" });
+    Object.assign(process.env, { NODE_ENV: "production", SEARCHOPS_API_KEY: "test-operator-key-at-least-32-characters", SEARCHOPS_PROJECT_KEYS: "{}", SEARCHOPS_LOCAL_DEMO: "false", SEARCHOPS_ALLOW_PRIVATE_CRAWL: "false", SEARCHOPS_ALLOW_PAT: "false", ALLOW_LLM_FALLBACK: "false", USE_PLAYWRIGHT: "false", DATABASE_URL: "postgresql://u:p@db.example/db?sslmode=require", DIRECT_URL: "postgresql://u:p@db.example/db?sslmode=require", GITHUB_APP_ID: "42", GITHUB_APP_SLUG: "test-app", GITHUB_APP_WEBHOOK_SECRET: "s".repeat(32), OPENROUTER_API_KEY: "test", OPENROUTER_MODEL: "liquid/lfm-2.5-2.6b:free", NEXT_PUBLIC_APP_URL: "https://app.example" });
     delete process.env.GITHUB_APP_PRIVATE_KEY;
     assert.throws(productionRequirements, /required environment/);
     process.env.GITHUB_APP_PRIVATE_KEY = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
     assert.doesNotThrow(productionRequirements);
+    process.env.OPENROUTER_MODEL = "openai/gpt-4o-mini";
+    assert.throws(productionRequirements, /:free OpenRouter model/);
+    process.env.OPENROUTER_MODEL = "liquid/lfm-2.5-2.6b:free";
     process.env.DATABASE_URL = "postgresql://u:p@db.example/db";
     assert.throws(productionRequirements, /TLS PostgreSQL/);
     process.env.GITHUB_APP_WEBHOOK_SECRET = "short";
@@ -92,6 +100,15 @@ for (const address of [
 test("public IPv4 and IPv6", () => {
   assert.ok(isPublicAddress("8.8.8.8"));
   assert.ok(isPublicAddress("2606:4700:4700::1111"));
+});
+test("pickPinnedAddress prefers public IPv4 when DNS also returns NAT64 IPv6", () => {
+  const addresses = [
+    { address: "64:ff9b::401d:1183", family: 6 },
+    { address: "216.198.79.195", family: 4 },
+  ];
+  const publicOnly = addresses.filter((a) => isPublicAddress(a.address));
+  assert.equal(publicOnly.length, 1);
+  assert.equal(pickPinnedAddress(publicOnly).address, "216.198.79.195");
 });
 test("URL canonicalization and traversal", () => {
   assert.equal(
@@ -190,6 +207,36 @@ test("orphan reachability, duplicate title and sitemap rules", () => {
     ),
     false,
   );
+});
+test("sitemap patch adds missing URLs for draft remediation", () => {
+  const { generateRemediationPatch } =
+    require("../lib/remediate/patch-generator") as typeof import("../lib/remediate/patch-generator");
+  const finding = {
+    id: "test-sitemap",
+    type: "SITEMAP_INCONSISTENCY" as const,
+    severity: "MEDIUM" as const,
+    confidence: 100,
+    lens: "search" as const,
+    title: "Sitemap",
+    description: "",
+    status: "OPEN" as const,
+    evidence: {
+      pagesAffected: 1,
+      firstBadDeploy: "#1",
+      template: "unattributed",
+      sampleUrls: ["https://site.example/"],
+      details: { ruleVersion: "rules-v2", observations: [] },
+    },
+    rootCause: null,
+  };
+  const patch = generateRemediationPatch(finding, {
+    path: "public/sitemap.xml",
+    current: "",
+    previous: "",
+    url: "https://site.example/",
+  });
+  assert.match(patch.content || "", /site\.example/);
+  assert.equal(patch.draft, true);
 });
 test("llms.txt patch generates valid new file content", () => {
   const { generateRemediationPatch } =
@@ -400,12 +447,47 @@ test("LLM absence fails closed; malformed output fails", async () => {
     () => new OpenRouterClient().completeWithFallback([]),
     /Configure/,
   );
-  process.env.OPENROUTER_MODEL = "test-model";
+  process.env.OPENROUTER_API_KEY = "test";
+  process.env.OPENROUTER_MODEL = "liquid/lfm-2.5-2.6b:free";
   await assert.rejects(() =>
     new OpenRouterClient("test", async () =>
       Response.json({ choices: [] }),
     ).completeWithFallback([]),
   );
+});
+test("OpenRouter uses only free models and falls back through the chain", async () => {
+  process.env.OPENROUTER_API_KEY = "test";
+  process.env.OPENROUTER_MODEL = "liquid/lfm-2.5-2.6b:free";
+  assert.throws(
+    () => resolveFreeModelChain("openai/gpt-4o-mini"),
+    /not free/,
+  );
+  assert.equal(isFreeModel("liquid/lfm-2.5-2.6b:free"), true);
+  const chain = resolveFreeModelChain();
+  assert.ok(chain.every((model) => model.endsWith(":free")));
+  assert.deepEqual(chain.slice(0, FREE_MODELS_CHAIN.length), [
+    ...FREE_MODELS_CHAIN,
+  ]);
+  let calls = 0;
+  const result = await new OpenRouterClient("test", async (_input, init) => {
+    calls += 1;
+    const body = JSON.parse(String(init?.body)) as { model: string };
+    if (body.model === "liquid/lfm-2.5-2.6b:free")
+      return Response.json({ choices: [] }, { status: 429 });
+    if (body.model === "minimax/minimax-m2.7:free")
+      return Response.json({
+        choices: [
+          {
+            message: { content: '{"ok":true}' },
+            finish_reason: "stop",
+          },
+        ],
+      });
+    return Response.json({ choices: [] }, { status: 404 });
+  }).completeWithFallback([{ role: "user", content: "hi" }], { jsonMode: true });
+  assert.equal(calls, 2);
+  assert.equal(result.modelUsed, "minimax/minimax-m2.7:free");
+  assert.equal(result.isFallback, true);
 });
 test("authentication constant-time value check, project scope, session and CSRF", () => {
   process.env.SEARCHOPS_API_KEY = "operator-key-with-more-than-32-characters";

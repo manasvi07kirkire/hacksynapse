@@ -115,11 +115,7 @@ export async function runDeploymentAnalysis(
     for (const finding of findings) {
       finding.rootCause =
         finding.rootCause || diagnoseRootCause(finding, files);
-      if (
-        process.env.OPENROUTER_API_KEY &&
-        process.env.OPENROUTER_MODEL &&
-        !abort.signal.aborted
-      ) {
+      if (process.env.OPENROUTER_API_KEY && !abort.signal.aborted) {
         const result = await narrateFinding(
           finding,
           AbortSignal.any([abort.signal, AbortSignal.timeout(5000)]),

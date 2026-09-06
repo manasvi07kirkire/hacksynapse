@@ -4,6 +4,7 @@ import { sourceDiff, strictApply } from "./validate-patch";
 import { parseHtml } from "../extract/html-parser";
 import { parseLlmsTxt } from "../extract/llmstxt-parser";
 import { buildLlmsTxtTemplate } from "./llmstxt-template";
+import { mergeSitemapContent, sitemapIncludesUrls } from "./sitemap-template";
 import { fail } from "../server/errors";
 export interface GeneratedPatch {
   tier: RemediationTier;
@@ -126,6 +127,22 @@ export function generateRemediationPatch(
         "llms.txt is already valid; no patch required.",
       );
     }
+  } else if (
+    finding.type === "SITEMAP_INCONSISTENCY" &&
+    /sitemap\.xml$/i.test(path)
+  ) {
+    const missing = finding.evidence.sampleUrls.map((sample) =>
+      sample.startsWith("http")
+        ? sample
+        : new URL(sample.startsWith("/") ? sample : `/${sample}`, url).href,
+    );
+    after = mergeSitemapContent(current, missing);
+    if (current.trim() && sitemapIncludesUrls(current, missing))
+      fail(
+        422,
+        "UNSUPPORTED_SOURCE",
+        "Sitemap already lists the affected URLs.",
+      );
   }
   if (after === current)
     fail(
@@ -137,7 +154,20 @@ export function generateRemediationPatch(
   strictApply(path, current, diff);
   const isHtml = /\.html?$/.test(path);
   const isLlmsTxt = finding.type === "LLMSTXT_INVALID" && /\.txt$/i.test(path);
+  const isSitemap =
+    finding.type === "SITEMAP_INCONSISTENCY" && /sitemap\.xml$/i.test(path);
   const parsed = isHtml ? parseHtml(url, after) : null;
+  const missingSitemapUrls =
+    finding.type === "SITEMAP_INCONSISTENCY"
+      ? finding.evidence.sampleUrls.map((sample) =>
+          sample.startsWith("http")
+            ? sample
+            : new URL(
+                sample.startsWith("/") ? sample : `/${sample}`,
+                url,
+              ).href,
+        )
+      : [];
   const rulePassed =
     finding.type === "CANONICAL_STRIPPED"
       ? isHtml
@@ -149,7 +179,9 @@ export function generateRemediationPatch(
           ? !!parsed?.jsonLdSchemas.length
           : isLlmsTxt
             ? parseLlmsTxt(after).isValid
-            : false;
+            : isSitemap
+              ? sitemapIncludesUrls(after, missingSitemapUrls)
+              : false;
   if (!rulePassed)
     fail(
       422,
@@ -160,19 +192,23 @@ export function generateRemediationPatch(
   const validationResult = {
     syntaxCheck: true,
     ruleRecheckPassed: true,
-    buildable: isHtml || isLlmsTxt,
+    buildable: isHtml || isLlmsTxt || isSitemap,
     buildStatus: isHtml
       ? "NOT_REQUIRED_STATIC_HTML"
       : isLlmsTxt
         ? "NOT_REQUIRED_LLMS_TXT"
-        : "NOT_RUN",
+        : isSitemap
+          ? "NOT_REQUIRED_SITEMAP_XML"
+          : "NOT_RUN",
   };
   return {
     tier,
     targetFile: path,
     actionSummary: isLlmsTxt
       ? "Add a valid llms.txt file for AI discoverability"
-      : `Restore verified ${finding.type.toLowerCase()} declaration`,
+      : isSitemap
+        ? "Add missing URLs to sitemap.xml"
+        : `Restore verified ${finding.type.toLowerCase()} declaration`,
     diff,
     prTitle: `fix(discoverability): ${finding.type.toLowerCase()}`,
     prBody: `Deterministic finding ${finding.id}. Exact source/context and static rule validation passed. Build: ${validationResult.buildStatus}. Review required; never auto-merged.`,

@@ -2,7 +2,10 @@ import { AppError } from "../server/errors";
 import { FindingData } from "../detect/types";
 import { GitHubClient, RepoContext } from "../github/client";
 
-const INITIAL_FIX_TYPES = new Set<FindingData["type"]>(["LLMSTXT_INVALID"]);
+const INITIAL_FIX_TYPES = new Set<FindingData["type"]>([
+  "LLMSTXT_INVALID",
+  "SITEMAP_INCONSISTENCY",
+]);
 
 export function allowsInitialFix(
   findingType: FindingData["type"],
@@ -24,10 +27,13 @@ export function resolveRemediationPath(
     : sample.startsWith("/")
       ? sample
       : `/${sample}`;
-  if (sourceMap[pathname]) return sourceMap[pathname];
   if (finding.type === "LLMSTXT_INVALID") {
     return sourceMap["/llms.txt"] || "public/llms.txt";
   }
+  if (finding.type === "SITEMAP_INCONSISTENCY") {
+    return sourceMap["/sitemap.xml"] || "public/sitemap.xml";
+  }
+  if (sourceMap[pathname]) return sourceMap[pathname];
   return sourceMap[new URL(pathname, siteUrl).pathname];
 }
 

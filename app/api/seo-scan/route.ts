@@ -4,10 +4,7 @@ import { selector, url, text } from "../../../lib/server/validation";
 import { resolveProject, projectUrl } from "../../../lib/projects/service";
 import { db } from "../../../lib/db";
 import { github } from "../../../lib/github/client";
-import {
-  extractTargetContent,
-  extractHtmlContent,
-} from "../../../lib/seo-advisor/extract-target";
+import { extractHtmlContent } from "../../../lib/seo-advisor/extract-target";
 import {
   generateSuggestions,
   generateHeuristicSuggestions,
@@ -117,21 +114,24 @@ export const POST = api(
           "Configure an HTML page-to-source mapping for verifiable SEO edits.",
         );
       const sourceContent = await github.file(p, sourcePath, baseSha);
-      const content = body.prNumber
-        ? extractHtmlContent(pageUrl, sourceContent)
-        : await extractTargetContent(pageUrl);
-      const suggestions =
-        body.mode === "heuristic"
-          ? generateHeuristicSuggestions({
-              pageUrl,
-              targetKeywords: body.targetKeywords,
-              content,
-            })
-          : await generateSuggestions({
-              pageUrl,
-              targetKeywords: body.targetKeywords,
-              content,
-            });
+      const content = extractHtmlContent(pageUrl, sourceContent);
+      let suggestions;
+      let llmProvenance: string | undefined;
+      if (body.mode === "heuristic") {
+        suggestions = generateHeuristicSuggestions({
+          pageUrl,
+          targetKeywords: body.targetKeywords,
+          content,
+        });
+      } else {
+        const llm = await generateSuggestions({
+          pageUrl,
+          targetKeywords: body.targetKeywords,
+          content,
+        });
+        suggestions = llm.suggestions;
+        llmProvenance = `openrouter:${llm.modelUsed}:seo-v2`;
+      }
       const scan = await db.seoScan.create({
         data: {
           projectId: p.id,
@@ -147,7 +147,7 @@ export const POST = api(
           provenance:
             body.mode === "heuristic"
               ? "heuristic-v2"
-              : `openrouter:${process.env.OPENROUTER_MODEL}:seo-v2`,
+              : llmProvenance || "openrouter:free-chain:seo-v2",
           suggestions: { create: suggestions },
         },
       });

@@ -17,6 +17,7 @@
     "test:browser": "node --import tsx scripts/browser-test.ts",
     "demo": "node --import tsx scripts/test-db.ts",
     "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts",
+    "worker:production": "node --import tsx scripts/start-production-worker.ts",
     "deploy:preflight": "node --env-file-if-exists=.env --import tsx scripts/preflight.ts",
     "setup:github-app": "node --import tsx scripts/setup-github-app.ts",
     "bootstrap:revision-marker": "node --env-file-if-exists=.env --import tsx scripts/bootstrap-revision-marker.ts",

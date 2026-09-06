@@ -2,7 +2,7 @@ import { z } from "zod";
 import { api, jsonBody } from "../../../lib/server/api";
 import { selector, url, text } from "../../../lib/server/validation";
 import { resolveProject, projectUrl } from "../../../lib/projects/service";
-import { extractTargetContent } from "../../../lib/seo-advisor/extract-target";
+import { extractAuthorizedPageContent } from "../../../lib/seo-advisor/extract-target";
 import { runCitationProbabilityTest } from "../../../lib/geo/citation-test";
 import { db } from "../../../lib/db";
 import { operation } from "../../../lib/server/operation";
@@ -33,10 +33,15 @@ export const POST = api(
       .max(100)
       .parse(req.headers.get("idempotency-key"));
     return operation(p.id, actor.id, "citation", key, body, async () => {
-      const content = await extractTargetContent(target);
+      const content = await extractAuthorizedPageContent(p, target);
+      const pageText =
+        content.textSample ||
+        [content.title, content.metaDescription, ...content.headings.h1]
+          .filter(Boolean)
+          .join(" ");
       const result = await runCitationProbabilityTest({
         url: target,
-        pageText: content.textSample,
+        pageText,
         query: body.query,
         expectedFacts: body.expectedFacts,
       });

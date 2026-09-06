@@ -52,7 +52,8 @@ export const POST = api(
         const fixableStatus =
           f.deployment.status === "REGRESSION" ||
           (f.deployment.status === "DEGRADED" &&
-            tierClass.tier === "TIER_A");
+            f.deployment.revisionVerified &&
+            (tierClass.tier === "TIER_A" || tierClass.tier === "TIER_B"));
         if (
           f.status !== "OPEN" ||
           f.ruleVersion !== RULE_VERSION ||
@@ -134,15 +135,25 @@ export const POST = api(
             "Configure the verified page-to-source mapping or inspect the source diagnosis.",
           );
         const initialFix = allowsInitialFix(finding.type, !!previous);
+        const optionalSource =
+          initialFix ||
+          (finding.type === "SITEMAP_INCONSISTENCY" &&
+            path.endsWith("sitemap.xml"));
         const current = await readRepoSource(
           github,
           project,
           path,
           f.deployment.sha,
-          initialFix,
+          optionalSource,
         );
         const prior = previous
-          ? await readRepoSource(github, project, path, previous.sha, initialFix)
+          ? await readRepoSource(
+              github,
+              project,
+              path,
+              previous.sha,
+              optionalSource,
+            )
           : "";
         const patch = generateRemediationPatch(finding, {
           path,

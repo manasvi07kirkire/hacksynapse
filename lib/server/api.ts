@@ -77,6 +77,7 @@ export async function rateLimit(key: string, limit = 60) {
     if (bucket.count > limit)
       fail(429, "RATE_LIMITED", "Too many requests. Retry in one minute.");
   } catch (e) {
+    if (e instanceof AppError && e.code === "RATE_LIMITED") throw e;
     if (process.env.NODE_ENV === "production") throw e;
     logEvent({
       event: "rate_limit_skipped",

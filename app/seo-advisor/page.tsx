@@ -33,7 +33,7 @@ export default function SeoAdvisorPage() {
   const [keywords, setKeywords] = useState("");
   const [sourceMode, setSourceMode] = useState("url");
   const [prNumber, setPrNumber] = useState("");
-  const [mode, setMode] = useState("llm");
+  const [mode, setMode] = useState("heuristic");
   const [scan, setScan] = useState<Scan | null>(null);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{
@@ -112,13 +112,22 @@ export default function SeoAdvisorPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok)
+        throw new Error(
+          data.code
+            ? `${data.error} (${data.code}${data.requestId ? ` · ${data.requestId}` : ""})`
+            : data.error || "SEO operation failed.",
+        );
       if (controller.signal.aborted) return;
       if (apply) setResult(data);
       else {
         setScan(data);
         setEdits({});
         setResult(null);
+        if (!data.suggestions?.length)
+          setError(
+            "Scan completed with no suggestions. Try different keywords or switch to the configured model.",
+          );
       }
     } catch (e) {
       if (!controller.signal.aborted)

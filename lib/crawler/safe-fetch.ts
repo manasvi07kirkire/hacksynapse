@@ -96,12 +96,12 @@ export async function safeFetch(
           );
       }),
     ]);
-    if (
-      !addresses.length ||
-      (!privateAllowed && addresses.some((a) => !isPublicAddress(a.address)))
-    )
+    const crawlAddresses = privateAllowed
+      ? addresses
+      : addresses.filter((a) => isPublicAddress(a.address));
+    if (!crawlAddresses.length)
       fail(400, "SSRF_BLOCKED", "Target address is not public.");
-    const pinned = pickPinnedAddress(addresses);
+    const pinned = pickPinnedAddress(crawlAddresses);
     const response = await new Promise<FetchResult>((resolve, reject) => {
       const request = (url.protocol === "https:" ? https : http).request(
         url,

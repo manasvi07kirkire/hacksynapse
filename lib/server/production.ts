@@ -1,6 +1,7 @@
 import { createPrivateKey } from "node:crypto";
 import { getConfig } from "./config";
 import { fail } from "./errors";
+import { isFreeModel } from "../llm/free-models";
 
 export function productionRequirements() {
   getConfig();
@@ -12,7 +13,6 @@ export function productionRequirements() {
     "GITHUB_APP_SLUG",
     "GITHUB_APP_WEBHOOK_SECRET",
     "OPENROUTER_API_KEY",
-    "OPENROUTER_MODEL",
     "NEXT_PUBLIC_APP_URL",
   ].filter((name) => !process.env[name]);
   if (missing.length)
@@ -20,6 +20,13 @@ export function productionRequirements() {
       503,
       "PRODUCTION_CONFIG_REQUIRED",
       `Configure required environment variables: ${missing.join(", ")}.`,
+    );
+  const preferred = process.env.OPENROUTER_MODEL?.trim();
+  if (preferred && !isFreeModel(preferred))
+    fail(
+      503,
+      "LLM_CONFIG_INVALID",
+      "OPENROUTER_MODEL must be a :free OpenRouter model ID.",
     );
   if (
     !/^\d+$/.test(process.env.GITHUB_APP_ID!) ||

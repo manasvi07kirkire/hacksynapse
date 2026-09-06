@@ -56,12 +56,24 @@ export function parseSuggestions(
     return { ...raw, id: randomUUID(), status: "pending" };
   });
 }
+function keywordCorpus(content: AdvisorPageContent): string {
+  return [
+    content.textSample,
+    content.title || "",
+    content.metaDescription || "",
+    ...content.headings.h1,
+    ...content.headings.h2,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
 export function generateHeuristicSuggestions(
   input: SuggestionInput,
 ): Suggestion[] {
-  const { content, targetKeywords } = input;
+  const { content, targetKeywords, pageUrl } = input;
+  const corpus = keywordCorpus(content);
   const keyword = targetKeywords.find((k) =>
-    content.textSample.toLowerCase().includes(k.toLowerCase()),
+    corpus.includes(k.toLowerCase()),
   );
   if (!keyword) return [];
   const proposals: Suggestion[] = [];
@@ -83,25 +95,38 @@ export function generateHeuristicSuggestions(
       });
   }
   if (!content.metaDescription) {
-    const after = content.textSample.slice(0, 155);
-    if (after.length >= 50)
+    const after = content.textSample.slice(0, 155) || `${keyword} — ${content.title || pageUrl}`;
+    if (after.length >= 20)
       proposals.push({
         id: randomUUID(),
         type: "rewrite-meta",
         location: "meta description",
         before: "",
-        after,
+        after: after.slice(0, 155),
         rationale:
           "Use existing visible source text for the missing description.",
         confidence: 70,
         status: "pending",
       });
   }
+  if (content.headings.h1.length === 0) {
+    const after = `${keyword[0].toUpperCase()}${keyword.slice(1)}`;
+    proposals.push({
+      id: randomUUID(),
+      type: "heading-change",
+      location: "H1",
+      before: "",
+      after,
+      rationale: "The mapped HTML source has no H1 heading for this page.",
+      confidence: 65,
+      status: "pending",
+    });
+  }
   return proposals;
 }
 export async function generateSuggestions(
   input: SuggestionInput,
-): Promise<Suggestion[]> {
+): Promise<{ suggestions: Suggestion[]; modelUsed: string }> {
   const response = await openRouter.completeWithFallback(
     [
       {
@@ -119,8 +144,11 @@ export async function generateSuggestions(
   } catch {
     fail(502, "LLM_INVALID_RESPONSE", "Invalid suggestion response.");
   }
-  return parseSuggestions(
-    z.object({ suggestions: z.unknown() }).strict().parse(parsed).suggestions,
-    input.content,
-  );
+  return {
+    suggestions: parseSuggestions(
+      z.object({ suggestions: z.unknown() }).strict().parse(parsed).suggestions,
+      input.content,
+    ),
+    modelUsed: response.modelUsed,
+  };
 }
