@@ -55,6 +55,8 @@ export function connectErrorMessage(
       return "GitHub could not access that repository. Check owner/repo spelling, install the SearchOps app on the repo, and confirm the installation ID matches the install URL.";
     case "UNAUTHORIZED":
       return "Sign in with your operator key first, then connect the repository.";
+    case "INTERNAL_ERROR":
+      return "SearchOps could not reach the database or GitHub. Wait a moment, refresh, and try again. If it persists, confirm Vercel production DATABASE_URL uses Supabase port 6543.";
     default:
       return error;
   }

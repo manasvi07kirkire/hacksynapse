@@ -67,41 +67,37 @@ export const POST = api(
       maxBytes: 1048576,
       contentTypes: ["text/html", "application/xhtml+xml"],
     });
-    const project = await db.$transaction(async (tx) => {
-      // Serialize configuration changes with worker claims and enqueue operations.
-      const existing = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Project" WHERE repo = ${body.repo} FOR UPDATE`;
-      if (
-        existing[0] &&
-        (await tx.analysisJob.count({
-          where: {
-            projectId: existing[0].id,
-            status: { in: ["QUEUED", "RUNNING"] },
-          },
-        }))
-      )
-        fail(
-          409,
-          "PROJECT_BUSY",
-          "Finish or cancel pending analyses before changing project configuration.",
-        );
-      return tx.project.upsert({
-        where: { repo: body.repo },
-        update: {
-          enabled: true,
-          siteUrl,
-          routeManifest: JSON.stringify([...new Set(body.routeManifest)]),
-          sourceMap: JSON.stringify(body.sourceMap),
-          installId: context.installId,
-          defaultBranch: body.defaultBranch,
+    const existing = await db.project.findUnique({ where: { repo: body.repo } });
+    if (
+      existing &&
+      (await db.analysisJob.count({
+        where: {
+          projectId: existing.id,
+          status: { in: ["QUEUED", "RUNNING"] },
         },
-        create: {
-          ...context,
-          siteUrl,
-          routeManifest: JSON.stringify([...new Set(body.routeManifest)]),
-          sourceMap: JSON.stringify(body.sourceMap),
-        },
-      });
+      }))
+    )
+      fail(
+        409,
+        "PROJECT_BUSY",
+        "Finish or cancel pending analyses before changing project configuration.",
+      );
+    const project = await db.project.upsert({
+      where: { repo: body.repo },
+      update: {
+        enabled: true,
+        siteUrl,
+        routeManifest: JSON.stringify([...new Set(body.routeManifest)]),
+        sourceMap: JSON.stringify(body.sourceMap),
+        installId: context.installId,
+        defaultBranch: body.defaultBranch,
+      },
+      create: {
+        ...context,
+        siteUrl,
+        routeManifest: JSON.stringify([...new Set(body.routeManifest)]),
+        sourceMap: JSON.stringify(body.sourceMap),
+      },
     });
     return {
       project: {
