@@ -49,10 +49,10 @@ export const TierBadge: React.FC<TierBadgeProps> = ({
   const symbol = isPatina ? "●" : isMarigold ? "▲" : "■";
 
   const colorStyles = isPatina
-    ? "text-patina-400 bg-patina-tint border-patina-400/40"
+    ? "text-patina-600 bg-patina-soft border-patina-500/40"
     : isMarigold
-      ? "text-marigold-400 bg-marigold-tint border-marigold-400/40"
-      : "text-ember-400 bg-ember-tint border-ember-400/40";
+      ? "text-marigold-600 bg-marigold-soft border-marigold-400/40"
+      : "text-ember-600 bg-ember-soft border-ember-600/40";
 
   return (
     <div className={clsx("inline-flex flex-col items-start gap-1", className)}>

@@ -113,6 +113,12 @@ export async function safeFetch(
             "User-Agent": "SearchOps/1.0 (authorized discoverability monitor)",
             Accept: "text/html,application/xml,text/plain",
             "Accept-Encoding": "identity",
+            ...(process.env.SEARCHOPS_VERCEL_BYPASS_SECRET
+              ? {
+                  "x-vercel-protection-bypass":
+                    process.env.SEARCHOPS_VERCEL_BYPASS_SECRET,
+                }
+              : {}),
           },
           lookup: (_host, lookupOptions, callback) => {
             if (lookupOptions?.all) {

@@ -22,24 +22,20 @@ export const StatusDot: React.FC<StatusDotProps> = ({
   const isDegraded = status === "DEGRADED";
   const isRegression = status === "REGRESSION";
 
-  // Shape symbol according to design system:
-  // ● filled circle -> regression (ember)
-  // ■ filled square -> healthy (patina)
-  // ◆ diamond -> remediated (patina)
-  // ▲ triangle -> degraded (marigold)
-  let symbol = "■";
+  // Shape per design.md §5.2: ● PASS · ▲ DEGRADED · ■ REGRESSION
+  let symbol = "●";
   let textLabel = label || status;
-  let colorClasses = "text-patina-400 border-patina-600/40 bg-patina-tint";
+  let colorClasses = "text-patina-600 border-patina-500/40 bg-patina-soft";
 
   if (isRegression) {
-    symbol = "●";
-    colorClasses = "text-ember-400 border-ember-600/40 bg-ember-tint";
+    symbol = "■";
+    colorClasses = "text-ember-600 border-ember-600/40 bg-ember-soft";
   } else if (isDegraded) {
     symbol = "▲";
-    colorClasses = "text-marigold-400 border-marigold-400/30 bg-marigold-tint";
+    colorClasses = "text-marigold-600 border-marigold-400/30 bg-marigold-soft";
   } else if (isRemediated) {
     symbol = "◆";
-    colorClasses = "text-patina-400 border-patina-600/40 bg-patina-tint";
+    colorClasses = "text-patina-600 border-patina-500/40 bg-patina-soft";
   }
 
   const sizeClasses = {

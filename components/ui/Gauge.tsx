@@ -33,30 +33,30 @@ export const Gauge: React.FC<GaugeProps> = ({
 
   // Score threshold mapping
   let strokeColor = "#4FA695"; // patina-400 — PASS
-  let statusColor = "text-patina-400";
-  let statusBg = "bg-patina-tint/60 border-patina-400/40";
+  let statusColor = "text-patina-600";
+  let statusBg = "bg-patina-soft border-patina-500/40";
   let statusText = "PASS · OPTIMIZED";
   let StatusIcon = CheckCircle;
 
   if (clamped < 60) {
-    strokeColor = "#F26A2E";
-    statusColor = "text-ember-400";
-    statusBg = "bg-ember-tint/60 border-ember-400/40";
+    strokeColor = "#C23F10";
+    statusColor = "text-ember-600";
+    statusBg = "bg-ember-soft border-ember-600/40";
     statusText = "REGRESSION DETECTED";
     StatusIcon = AlertTriangle;
   } else if (clamped < 85) {
-    strokeColor = "#E7A13A";
-    statusColor = "text-marigold-400";
-    statusBg = "bg-marigold-tint/60 border-marigold-400/40";
+    strokeColor = "#B4791F";
+    statusColor = "text-marigold-600";
+    statusBg = "bg-marigold-soft border-marigold-400/40";
     statusText = "DEGRADED · AT RISK";
     StatusIcon = TrendingDown;
   }
 
-  const strokeWidth = 12;
+  const strokeWidth = 8;
   const radius = (size - strokeWidth * 2) / 2;
   const center = size / 2;
-  const arcDegrees = 270;
-  const startAngle = 135;
+  const arcDegrees = 240;
+  const startAngle = 150;
   const totalCircumference = 2 * Math.PI * radius;
   const arcLength = (arcDegrees / 360) * totalCircumference;
   const dashOffset = animated
@@ -68,12 +68,12 @@ export const Gauge: React.FC<GaugeProps> = ({
   return (
     <div
       className={clsx(
-        "relative flex flex-col items-center justify-between p-5 sm:p-6 bg-ink-800 border border-ink-700 rounded-md transition-all duration-200 w-full shadow-card",
+        "relative flex w-full flex-col items-center justify-between rounded-lg border border-paper-200 bg-surface p-5 transition-all duration-[160ms] sm:p-6",
         className,
       )}
     >
       {/* Header Eyebrow */}
-      <div className="w-full flex items-center justify-between border-b border-ink-700 pb-3 mb-3">
+      <div className="mb-3 flex w-full items-center justify-between border-b border-paper-200 pb-3">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-bold tracking-widest text-bone-500 uppercase">
             {lensLabel}
@@ -84,10 +84,10 @@ export const Gauge: React.FC<GaugeProps> = ({
             className={clsx(
               "font-mono text-sm font-bold px-2.5 py-1 rounded-sm tabular-nums border flex items-center gap-1 shrink-0",
               delta < 0
-                ? "text-ember-400 bg-ember-tint border-ember-600/40"
+                ? "text-ember-600 bg-ember-soft border-ember-600/40"
                 : delta > 0
-                  ? "text-patina-400 bg-patina-tint border-patina-600/40"
-                  : "text-bone-500 bg-ink-850 border-ink-700",
+                  ? "text-patina-600 bg-patina-soft border-patina-500/40"
+                  : "text-bone-700 bg-paper-50 border-paper-200",
             )}
           >
             {delta > 0 ? `+${delta}` : delta} PTS
@@ -107,7 +107,7 @@ export const Gauge: React.FC<GaugeProps> = ({
             cy={center}
             r={radius}
             fill="none"
-            stroke="#15110D"
+            stroke="#E0D4C0"
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength} ${totalCircumference}`}
             strokeLinecap="round"
@@ -155,7 +155,7 @@ export const Gauge: React.FC<GaugeProps> = ({
         {/* Center Score Number & Label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pt-3">
           <span
-            className="font-display font-black text-bone-100 tabular-nums leading-none"
+            className="font-mono text-mono-num-xl font-bold tabular-nums leading-none text-espresso-900"
             style={{ fontSize: "clamp(3rem, 5vw, 4rem)" }}
           >
             {clamped}
@@ -167,8 +167,8 @@ export const Gauge: React.FC<GaugeProps> = ({
       </div>
 
       {/* Footer: Title + Status */}
-      <div className="w-full text-center mt-3 border-t border-ink-700 pt-3 flex flex-col items-center gap-2">
-        <h4 className="font-sans font-semibold text-base sm:text-lg text-bone-100 leading-tight">
+      <div className="mt-3 flex w-full flex-col items-center gap-2 border-t border-paper-200 pt-3 text-center">
+        <h4 className="font-sans text-base font-semibold leading-tight text-espresso-900 sm:text-lg">
           {title}
         </h4>
         {subtitle && (

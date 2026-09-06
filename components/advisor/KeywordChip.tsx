@@ -19,9 +19,9 @@ export const KeywordChip: React.FC<KeywordChipProps> = ({
       className={clsx(
         "inline-flex items-center gap-1.5 font-mono text-xs px-2 py-1 rounded-sm border",
         variant === "add" &&
-          "bg-patina-tint text-patina-600 border-patina-400/40",
+          "bg-patina-soft text-patina-600 border-patina-600/30",
         variant === "remove" &&
-          "bg-ember-tint text-bone-700 border-bone-300 line-through",
+          "bg-ember-soft text-espresso-700 border-paper-200 line-through",
         variant === "neutral" && "bg-bone-300/40 text-ink-900 border-bone-300",
       )}
     >

@@ -2,6 +2,8 @@ import { FindingData } from "../detect/types";
 import { classifyRemediationTier, RemediationTier } from "./tier-manager";
 import { sourceDiff, strictApply } from "./validate-patch";
 import { parseHtml } from "../extract/html-parser";
+import { parseLlmsTxt } from "../extract/llmstxt-parser";
+import { buildLlmsTxtTemplate } from "./llmstxt-template";
 import { fail } from "../server/errors";
 export interface GeneratedPatch {
   tier: RemediationTier;
@@ -111,6 +113,19 @@ export function generateRemediationPatch(
         /return\s*\{/,
         (m) => m + "\n" + declaration[0].replace(/,?$/, ","),
       );
+  } else if (finding.type === "LLMSTXT_INVALID" && /\.txt$/i.test(path)) {
+    const pageUrl = url.replace(/\/llms\.txt$/i, "/");
+    const origin = new URL(pageUrl).origin;
+    const title =
+      parseHtml(pageUrl, previous || current).title?.trim() || "Site";
+    after = buildLlmsTxtTemplate(origin, title);
+    if (current.trim() && parseLlmsTxt(current).isValid) {
+      fail(
+        422,
+        "UNSUPPORTED_SOURCE",
+        "llms.txt is already valid; no patch required.",
+      );
+    }
   }
   if (after === current)
     fail(
@@ -121,6 +136,7 @@ export function generateRemediationPatch(
   const diff = sourceDiff(path, current, after);
   strictApply(path, current, diff);
   const isHtml = /\.html?$/.test(path);
+  const isLlmsTxt = finding.type === "LLMSTXT_INVALID" && /\.txt$/i.test(path);
   const parsed = isHtml ? parseHtml(url, after) : null;
   const rulePassed =
     finding.type === "CANONICAL_STRIPPED"
@@ -131,7 +147,9 @@ export function generateRemediationPatch(
         ? !parsed?.robotsDirectives.noindex
         : finding.type === "SCHEMA_REMOVED"
           ? !!parsed?.jsonLdSchemas.length
-          : false;
+          : isLlmsTxt
+            ? parseLlmsTxt(after).isValid
+            : false;
   if (!rulePassed)
     fail(
       422,
@@ -142,18 +160,24 @@ export function generateRemediationPatch(
   const validationResult = {
     syntaxCheck: true,
     ruleRecheckPassed: true,
-    buildable: isHtml,
-    buildStatus: isHtml ? "NOT_REQUIRED_STATIC_HTML" : "NOT_RUN",
+    buildable: isHtml || isLlmsTxt,
+    buildStatus: isHtml
+      ? "NOT_REQUIRED_STATIC_HTML"
+      : isLlmsTxt
+        ? "NOT_REQUIRED_LLMS_TXT"
+        : "NOT_RUN",
   };
   return {
     tier,
     targetFile: path,
-    actionSummary: `Restore verified ${finding.type.toLowerCase()} declaration`,
+    actionSummary: isLlmsTxt
+      ? "Add a valid llms.txt file for AI discoverability"
+      : `Restore verified ${finding.type.toLowerCase()} declaration`,
     diff,
     prTitle: `fix(discoverability): ${finding.type.toLowerCase()}`,
     prBody: `Deterministic finding ${finding.id}. Exact source/context and static rule validation passed. Build: ${validationResult.buildStatus}. Review required; never auto-merged.`,
     validationResult,
     content: after,
-    draft: tier !== "TIER_A" || !isHtml,
+    draft: tier !== "TIER_A",
   };
 }

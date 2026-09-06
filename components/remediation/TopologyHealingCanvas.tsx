@@ -27,9 +27,9 @@ interface TopologyHealingCanvasProps {
 
 const NODE_COLORS = {
   root: { fill: "#C23F10", text: "#F4EDE1", border: "#E8531C" },
-  ok: { fill: "#0F211E", text: "#4FA695", border: "#4FA695" },
-  error: { fill: "#2A150C", text: "#F26A2E", border: "#C23F10" },
-  sitemap: { fill: "#1A1613", text: "#D6CBB8", border: "#6E6353" },
+  ok: { fill: "#EEF8F5", text: "#2E6E62", border: "#3E8C7E" },
+  error: { fill: "#FEF3EE", text: "#C23F10", border: "#E8531C" },
+  sitemap: { fill: "#F6F0E6", text: "#453A2E", border: "#E0D4C0" },
 };
 
 export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
@@ -67,7 +67,7 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
       </div>
 
       {/* SVG Canvas */}
-      <div className="bg-ink-800 border border-ink-700 rounded-md overflow-hidden">
+      <div className="bg-paper-50 border border-paper-200 rounded-md overflow-hidden">
         <svg
           viewBox="0 0 400 280"
           className="w-full h-auto"
@@ -84,7 +84,7 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
               <path
                 d="M 20 0 L 0 0 0 20"
                 fill="none"
-                stroke="#2B241D"
+                stroke="#E0D4C0"
                 strokeWidth="0.5"
               />
             </pattern>
@@ -103,7 +103,7 @@ export const TopologyHealingCanvas: React.FC<TopologyHealingCanvasProps> = ({
                 y1={from.y}
                 x2={to.x}
                 y2={to.y}
-                stroke={edge.active ? "#4FA695" : "#383027"}
+                stroke={edge.active ? "#3E8C7E" : "#C4B6A0"}
                 strokeWidth={edge.active ? 1.5 : 1}
                 className={edge.active ? "line-active" : ""}
               />

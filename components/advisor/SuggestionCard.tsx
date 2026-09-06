@@ -24,41 +24,35 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   return (
     <div
       className={clsx(
-        "bg-bone-100 border border-bone-300 rounded-md border-l-[3px] border-l-steel-400 flex flex-col gap-3 p-4 sm:p-5 transition-opacity",
+        "flex flex-col gap-3 rounded-md border border-paper-200 border-l-[3px] border-l-steel-400 bg-surface p-4 transition-opacity duration-[160ms] sm:p-5",
         isApplied && "opacity-60",
       )}
     >
-      {/* Header row */}
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-xs sm:text-sm font-bold text-ink-900 uppercase tracking-[0.08em]">
-          {suggestion.location}
-        </span>
-        <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-sm border border-steel-400 text-steel-400 tabular-nums">
+        <span className="mono-label text-espresso-700">{suggestion.location}</span>
+        <span className="rounded-full border border-steel-400/40 px-2.5 py-1 font-mono text-[0.6875rem] font-bold tabular-nums text-steel-400">
           {suggestion.confidence}% CONFIDENCE
         </span>
       </div>
 
-      {/* Diff block */}
-      <div className="bg-darkSurface-code rounded-sm p-3 font-mono text-xs sm:text-sm overflow-x-auto">
-        <div className="bg-ember-tint text-bone-300 px-2 py-1 rounded-sm">
+      <div className="overflow-x-auto rounded-sm bg-darkSurface-code p-3 font-mono text-xs sm:text-sm">
+        <div className="rounded-sm bg-ember-soft px-2 py-1 text-espresso-700">
           <span className="text-ember-400">− </span>
           {suggestion.before || "(none)"}
         </div>
-        <div className="bg-patina-tint text-bone-300 px-2 py-1 rounded-sm mt-1">
+        <div className="mt-1 rounded-sm bg-patina-soft px-2 py-1 text-espresso-700">
           <span className="text-patina-400">+ </span>
           {suggestion.after}
         </div>
       </div>
 
-      {/* Rationale */}
-      <p className="font-sans text-sm text-bone-700 leading-relaxed">
+      <p className="font-sans text-sm leading-relaxed text-espresso-700">
         {suggestion.rationale}
       </p>
 
-      {/* Actions / status */}
       {isApplied ? (
         <div className="flex items-center gap-2 font-mono text-xs font-bold text-patina-600">
-          <span className="text-patina-400">◆</span>
+          <span aria-hidden>◆</span>
           <span>APPLIED IN PR #{appliedPrNumber ?? "—"}</span>
         </div>
       ) : (
@@ -67,25 +61,25 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
             onClick={() => onReject?.(suggestion.id)}
             disabled={isDecided}
             className={clsx(
-              "flex-1 py-2 px-3 min-h-[38px] rounded-sm border font-mono text-xs sm:text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40",
+              "min-h-[40px] flex-1 rounded-sm border px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-all duration-[160ms] disabled:opacity-40 sm:text-sm",
               isRejected
-                ? "border-bone-500 bg-bone-300/40 text-bone-700"
-                : "border-bone-500 text-bone-700 hover:bg-bone-300/30",
+                ? "border-paper-200 bg-paper-100 text-bone-700"
+                : "border-paper-200 text-espresso-700 hover:bg-paper-50",
             )}
           >
-            − Reject
+            Reject
           </button>
           <button
             onClick={() => onApprove?.(suggestion.id)}
             disabled={isDecided}
             className={clsx(
-              "flex-1 py-2 px-3 min-h-[38px] rounded-sm border font-mono text-xs sm:text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-40",
+              "min-h-[40px] flex-1 rounded-sm border px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-all duration-[160ms] disabled:opacity-40 sm:text-sm",
               suggestion.status === "approved"
-                ? "border-patina-400 bg-patina-400 text-bone-100"
-                : "border-patina-400 text-patina-600 hover:bg-patina-400/10",
+                ? "border-patina-600 bg-patina-600 text-white"
+                : "border-patina-600 text-patina-600 hover:bg-patina-soft",
             )}
           >
-            {suggestion.status === "approved" ? "✓ Approved" : "+ Approve"}
+            {suggestion.status === "approved" ? "Approved" : "Approve"}
           </button>
         </div>
       )}

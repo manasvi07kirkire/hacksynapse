@@ -28,17 +28,16 @@ export const PRCard: React.FC<PRCardProps> = ({
   const isApplied = status === "APPLIED";
 
   return (
-    <div className="bg-ink-800 border border-ink-700 rounded-sm p-4 sm:p-5 flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ink-700 pb-3">
+    <div className="bg-surface border border-paper-200 rounded-lg p-4 sm:p-5 flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-paper-200 pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-sm bg-patina-tint text-patina-400 border border-patina-400/40 flex items-center justify-center font-mono font-bold text-xs">
-            <GitPullRequest className="w-4 h-4 text-patina-400" />
+          <div className="w-7 h-7 rounded-sm bg-patina-soft text-patina-600 border border-patina-600/30 flex items-center justify-center font-mono font-bold text-xs">
+            <GitPullRequest className="w-4 h-4 text-patina-600" />
           </div>
-          <span className="font-mono text-sm font-bold text-bone-100">
+          <span className="font-mono text-sm font-bold text-espresso-900">
             PR #{prNumber}
           </span>
-          <span className="font-mono text-xs sm:text-sm text-bone-400 uppercase">
+          <span className="font-mono text-xs sm:text-sm text-bone-700 uppercase">
             Autonomous Tier-A Patch
           </span>
         </div>
@@ -47,36 +46,34 @@ export const PRCard: React.FC<PRCardProps> = ({
           className={clsx(
             "font-mono text-xs font-bold px-2.5 py-1 rounded-sm border uppercase tracking-wider",
             isApplied
-              ? "text-patina-400 bg-patina-tint border-patina-400/40"
-              : "text-marigold-400 bg-marigold-tint border-marigold-400/40",
+              ? "text-patina-600 bg-patina-soft border-patina-600/30"
+              : "text-marigold-600 bg-marigold-soft border-marigold-600/30",
           )}
         >
           {isApplied ? "● MERGED & DEPLOYED" : "● READY TO MERGE"}
         </span>
       </div>
 
-      {/* PR Summary */}
       <div className="flex flex-col gap-1.5">
-        <h4 className="font-sans font-bold text-base sm:text-lg text-bone-100">
+        <h4 className="font-sans font-bold text-base sm:text-lg text-espresso-900">
           {title}
         </h4>
-        <p className="font-sans text-sm text-bone-300 leading-relaxed">
+        <p className="font-sans text-sm text-espresso-700 leading-relaxed">
           {body}
         </p>
       </div>
 
-      {/* Diff Box */}
       <div className="flex flex-col gap-2 font-mono">
-        <div className="flex items-center justify-between text-xs sm:text-sm text-bone-400">
+        <div className="flex items-center justify-between text-xs sm:text-sm text-bone-700">
           <span>
-            Target: <strong className="text-bone-100">{targetFile}</strong>
+            Target: <strong className="text-espresso-900">{targetFile}</strong>
           </span>
-          <span className="text-xs text-patina-400 uppercase font-bold">
+          <span className="text-xs text-patina-600 uppercase font-bold">
             Unified Git Diff
           </span>
         </div>
 
-        <div className="bg-ink-900 border border-ink-700 rounded-sm p-3.5 font-mono text-xs sm:text-sm overflow-x-auto">
+        <div className="bg-darkSurface-code border border-paper-200 rounded-sm p-3.5 font-mono text-xs sm:text-sm overflow-x-auto">
           <pre className="text-bone-300 leading-relaxed">
             {diff.split("\n").map((line, idx) => {
               const isAdd = line.startsWith("+") && !line.startsWith("+++");
@@ -91,8 +88,8 @@ export const PRCard: React.FC<PRCardProps> = ({
                   key={idx}
                   className={clsx(
                     "px-1 py-0.5 rounded-sm",
-                    isAdd && "bg-patina-tint text-patina-400 font-semibold",
-                    isDel && "bg-ember-tint text-ember-400 font-semibold",
+                    isAdd && "bg-patina-soft/40 text-patina-400 font-semibold",
+                    isDel && "bg-ember-soft/40 text-ember-400 font-semibold",
                     isHeader && "text-bone-500 font-bold opacity-80",
                   )}
                 >
@@ -104,32 +101,30 @@ export const PRCard: React.FC<PRCardProps> = ({
         </div>
       </div>
 
-      {/* 3-Step Automated Validation Gate */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs sm:text-sm font-mono">
-        <div className="bg-ink-850 p-2.5 rounded-sm border border-ink-700 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-patina-400 shrink-0" />
-          <span className="truncate text-bone-300">
-            1. AST: <strong className="text-patina-400">PASS</strong>
+        <div className="bg-paper-50 p-2.5 rounded-sm border border-paper-200 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-patina-600 shrink-0" />
+          <span className="truncate text-espresso-700">
+            1. AST: <strong className="text-patina-600">PASS</strong>
           </span>
         </div>
-        <div className="bg-ink-850 p-2.5 rounded-sm border border-ink-700 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-patina-400 shrink-0" />
-          <span className="truncate text-bone-300">
-            2. Rules: <strong className="text-patina-400">0 FAIL</strong>
+        <div className="bg-paper-50 p-2.5 rounded-sm border border-paper-200 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-patina-600 shrink-0" />
+          <span className="truncate text-espresso-700">
+            2. Rules: <strong className="text-patina-600">0 FAIL</strong>
           </span>
         </div>
-        <div className="bg-ink-850 p-2.5 rounded-sm border border-ink-700 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-patina-400 shrink-0" />
-          <span className="truncate text-bone-300">
-            3. Build: <strong className="text-patina-400">CLEAN</strong>
+        <div className="bg-paper-50 p-2.5 rounded-sm border border-paper-200 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-patina-600 shrink-0" />
+          <span className="truncate text-espresso-700">
+            3. Build: <strong className="text-patina-600">CLEAN</strong>
           </span>
         </div>
       </div>
 
-      {/* Action Footer */}
       {!isApplied && onMergeFix && (
-        <div className="pt-3 border-t border-ink-700 flex items-center justify-between flex-wrap gap-2">
-          <span className="font-mono text-xs sm:text-sm text-bone-400">
+        <div className="pt-3 border-t border-paper-200 flex items-center justify-between flex-wrap gap-2">
+          <span className="font-mono text-xs sm:text-sm text-bone-700">
             One-click merge to staging (#185)
           </span>
           <button

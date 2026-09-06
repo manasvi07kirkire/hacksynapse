@@ -82,6 +82,7 @@ export async function createBranchCommitAndPullRequest(
     const parts = file.path.split("/");
     let treeSha = base.tree.sha;
     let mode = "100644";
+    let exists = true;
     for (let i = 0; i < parts.length; i++) {
       const tree = z
         .object({
@@ -97,8 +98,16 @@ export async function createBranchCommitAndPullRequest(
         })
         .parse(await gh.request(context, `/git/trees/${treeSha}`));
       const entry = tree.tree.find((e) => e.path === parts[i]);
-      if (!entry)
-        fail(422, "SOURCE_MISSING", "Only existing files may be edited.");
+      if (!entry) {
+        if (i < parts.length - 1)
+          fail(
+            422,
+            "SOURCE_MISSING",
+            "Parent directory missing for new file.",
+          );
+        exists = false;
+        break;
+      }
       if (i < parts.length - 1) {
         if (entry.type !== "tree" || entry.mode !== "040000")
           fail(422, "UNSAFE_PATH", "Source directory is not a regular tree.");
@@ -112,6 +121,15 @@ export async function createBranchCommitAndPullRequest(
           );
         mode = entry.mode;
       }
+    }
+    if (!exists) {
+      entries.push({
+        path: file.path,
+        mode: "100644",
+        type: "blob",
+        content: file.content,
+      });
+      continue;
     }
     entries.push({
       path: file.path,

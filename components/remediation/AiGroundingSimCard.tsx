@@ -39,8 +39,8 @@ export const AiGroundingSimCard: React.FC<AiGroundingSimCardProps> = ({
           className={clsx(
             "flex items-center gap-1.5 font-mono text-sm font-black px-3 py-1 rounded-sm border",
             isHealthy
-              ? "text-patina-400 bg-patina-tint border-patina-400/30"
-              : "text-ember-400 bg-ember-tint border-ember-400/30",
+              ? "text-patina-600 bg-patina-soft border-patina-600/30"
+              : "text-ember-600 bg-ember-soft border-ember-600/30",
           )}
         >
           {isHealthy ? (
@@ -98,11 +98,11 @@ export const AiGroundingSimCard: React.FC<AiGroundingSimCardProps> = ({
       {/* Chat Interface */}
       <div className="flex flex-col gap-3">
         {/* User Prompt */}
-        <div className="self-end max-w-xs sm:max-w-md bg-ink-800 border border-ink-700 rounded-md px-4 py-3">
-          <div className="font-mono text-2xs text-bone-500 uppercase tracking-wider mb-1">
+        <div className="self-end max-w-xs sm:max-w-md bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
+          <div className="font-mono text-2xs text-bone-700 uppercase tracking-wider mb-1">
             USER QUERY
           </div>
-          <p className="font-sans text-sm text-bone-200 leading-relaxed">
+          <p className="font-sans text-sm text-espresso-900 leading-relaxed">
             {prompt}
           </p>
         </div>
@@ -122,13 +122,13 @@ export const AiGroundingSimCard: React.FC<AiGroundingSimCardProps> = ({
 
         {/* Hallucination Alert */}
         {hallucination && (
-          <div className="bg-ember-tint border border-ember-600/40 rounded-sm px-4 py-3 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-ember-400 shrink-0 mt-0.5" />
+          <div className="bg-ember-soft border border-ember-600/30 rounded-sm px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-ember-600 shrink-0 mt-0.5" />
             <div>
-              <div className="font-mono text-xs font-black text-ember-400 uppercase tracking-wider mb-1">
+              <div className="font-mono text-xs font-black text-ember-600 uppercase tracking-wider mb-1">
                 HALLUCINATION ALERT
               </div>
-              <p className="font-sans text-sm text-bone-300 leading-relaxed">
+              <p className="font-sans text-sm text-espresso-700 leading-relaxed">
                 {hallucination}
               </p>
             </div>

@@ -12,6 +12,11 @@ import { classifyRemediationTier } from "../../../lib/remediate/tier-manager";
 import { operation } from "../../../lib/server/operation";
 import { createBranchCommitAndPullRequest } from "../../../lib/github/branch-commit";
 import { configurationKey } from "../../../lib/projects/configuration";
+import {
+  allowsInitialFix,
+  readRepoSource,
+  resolveRemediationPath,
+} from "../../../lib/remediate/resolve-remediation-source";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,6 +39,20 @@ export const POST = api(
       f.id,
       { findingId: f.id },
       async (key) => {
+        const finding: FindingData = {
+          ...f,
+          type: f.type as FindingData["type"],
+          severity: f.severity as FindingData["severity"],
+          lens: f.lens as FindingData["lens"],
+          status: "OPEN",
+          evidence: JSON.parse(f.evidence),
+          rootCause: JSON.parse(f.rootCause),
+        };
+        const tierClass = classifyRemediationTier(finding.type);
+        const fixableStatus =
+          f.deployment.status === "REGRESSION" ||
+          (f.deployment.status === "DEGRADED" &&
+            tierClass.tier === "TIER_A");
         if (
           f.status !== "OPEN" ||
           f.ruleVersion !== RULE_VERSION ||
@@ -41,7 +60,7 @@ export const POST = api(
             `-${configurationKey(project)}`,
           ) ||
           !f.deployment.revisionVerified ||
-          f.deployment.status !== "REGRESSION"
+          !fixableStatus
         )
           fail(
             409,
@@ -64,17 +83,7 @@ export const POST = api(
             "STALE_FINDING",
             "Analyze the current repository revision first.",
           );
-        const finding: FindingData = {
-          ...f,
-          type: f.type as FindingData["type"],
-          severity: f.severity as FindingData["severity"],
-          lens: f.lens as FindingData["lens"],
-          status: "OPEN",
-          evidence: JSON.parse(f.evidence),
-          rootCause: JSON.parse(f.rootCause),
-        };
-        const tier = classifyRemediationTier(finding.type).tier;
-        if (tier === "TIER_C") {
+        if (tierClass.tier === "TIER_C") {
           const approval = await db.remediation.findFirst({
             where: {
               findingId: f.id,
@@ -107,7 +116,7 @@ export const POST = api(
           },
           orderBy: { deployNumber: "desc" },
         });
-        if (!previous)
+        if (!previous && !allowsInitialFix(finding.type, !!previous))
           fail(
             422,
             "BASELINE_REQUIRED",
@@ -117,17 +126,24 @@ export const POST = api(
           .record(z.string())
           .parse(JSON.parse(project.sourceMap));
         const sample = finding.evidence.sampleUrls[0];
-        const path =
-          finding.rootCause?.file ||
-          sourceMap[new URL(sample, project.siteUrl).pathname];
+        const path = resolveRemediationPath(finding, sourceMap, project.siteUrl);
         if (!path)
           fail(
             422,
             "SOURCE_MAPPING_REQUIRED",
             "Configure the verified page-to-source mapping or inspect the source diagnosis.",
           );
-        const current = await github.file(project, path, f.deployment.sha);
-        const prior = await github.file(project, path, previous.sha);
+        const initialFix = allowsInitialFix(finding.type, !!previous);
+        const current = await readRepoSource(
+          github,
+          project,
+          path,
+          f.deployment.sha,
+          initialFix,
+        );
+        const prior = previous
+          ? await readRepoSource(github, project, path, previous.sha, initialFix)
+          : "";
         const patch = generateRemediationPatch(finding, {
           path,
           current,

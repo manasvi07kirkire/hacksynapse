@@ -1,11 +1,13 @@
 import { ReactNode } from "react";
+import { Alert } from "../../components/ui/Badge";
+
 export default function PreviewLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <p className="bg-marigold-300 p-4 text-center font-bold">
-        Design preview — simulated data and actions. Use the dashboard for
-        connected projects.
-      </p>
+      <Alert variant="warning" className="rounded-none border-x-0 border-t-0">
+        Design preview — simulated data and actions. Use{" "}
+        <strong>Watch</strong> for connected projects.
+      </Alert>
       {children}
     </>
   );

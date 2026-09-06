@@ -60,5 +60,6 @@ export const pageQuery = selector
     deployNumber: z.coerce.number().int().positive().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(25),
     cursor: id.optional(),
+    detail: z.enum(["summary", "full"]).default("full"),
   })
   .strict();

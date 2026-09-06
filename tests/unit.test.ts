@@ -191,6 +191,38 @@ test("orphan reachability, duplicate title and sitemap rules", () => {
     false,
   );
 });
+test("llms.txt patch generates valid new file content", () => {
+  const { generateRemediationPatch } =
+    require("../lib/remediate/patch-generator") as typeof import("../lib/remediate/patch-generator");
+  const patch = generateRemediationPatch(
+    {
+      id: "f1",
+      type: "LLMSTXT_INVALID",
+      severity: "MEDIUM",
+      confidence: 100,
+      lens: "ai-answer",
+      title: "LLMSTXT INVALID",
+      description: "",
+      status: "OPEN",
+      evidence: {
+        pagesAffected: 1,
+        firstBadDeploy: "#1",
+        template: "unattributed",
+        sampleUrls: ["/llms.txt"],
+        details: { ruleVersion: "rules-v2", observations: [] },
+      },
+      rootCause: null,
+    },
+    {
+      path: "public/llms.txt",
+      current: "",
+      previous: "",
+      url: "https://site.example/llms.txt",
+    },
+  );
+  assert.equal(patch.validationResult.ruleRecheckPassed, true);
+  assert.match(patch.content || "", /^# /);
+});
 test("llms.txt deterministic missing/invalid/valid", () => {
   assert.equal(parseLlmsTxt("").isValid, false);
   assert.equal(

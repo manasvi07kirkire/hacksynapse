@@ -30,20 +30,20 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({
   let valueColor = "text-patina-400";
   let StatusIcon = CheckCircle;
   let statusText = "PASS";
-  let statusBg = "bg-patina-tint/60 border-patina-400/30";
+  let statusBg = "bg-patina-soft border-patina-600/30";
 
   if (clamped < 60) {
     strokeColor = "#F26A2E";
     valueColor = "text-ember-400";
     StatusIcon = AlertTriangle;
     statusText = "CRITICAL";
-    statusBg = "bg-ember-tint/60 border-ember-400/30";
+    statusBg = "bg-ember-soft border-ember-600/30";
   } else if (clamped < 85) {
     strokeColor = "#E7A13A";
     valueColor = "text-marigold-400";
     StatusIcon = TrendingDown;
     statusText = "DEGRADED";
-    statusBg = "bg-marigold-tint/60 border-marigold-400/30";
+    statusBg = "bg-marigold-soft border-marigold-600/30";
   }
 
   const strokeWidth = 12;
@@ -60,9 +60,8 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({
   const delta = previousValue !== undefined ? value - previousValue : undefined;
 
   return (
-    <div className="bg-ink-800 border border-ink-700 rounded-md p-5 flex flex-col items-center gap-4 shadow-card">
-      {/* Label */}
-      <div className="w-full flex items-center justify-between border-b border-ink-700 pb-3">
+    <div className="flex flex-col items-center gap-4 rounded-lg border border-paper-200 bg-surface p-5">
+      <div className="w-full flex items-center justify-between border-b border-paper-200 pb-3">
         <span className="font-mono text-xs font-bold text-bone-500 uppercase tracking-widest">
           {label}
         </span>
@@ -71,8 +70,8 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({
             className={clsx(
               "font-mono text-sm font-black tabular-nums px-2.5 py-1 rounded-sm border",
               delta < 0
-                ? "text-ember-400 bg-ember-tint border-ember-600/40"
-                : "text-patina-400 bg-patina-tint border-patina-600/40",
+                ? "text-ember-600 bg-ember-soft border-ember-600/30"
+                : "text-patina-600 bg-patina-soft border-patina-600/30",
             )}
           >
             {delta > 0 ? `+${delta}` : delta}
@@ -91,7 +90,7 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({
             cy={center}
             r={radius}
             fill="none"
-            stroke="#15110D"
+            stroke="#E0D4C0"
             strokeWidth={strokeWidth}
             strokeDasharray={`${arcLength} ${totalCircumference}`}
             strokeLinecap="round"
@@ -132,8 +131,8 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({
       </div>
 
       {/* Status + Sublabel */}
-      <div className="w-full text-center border-t border-ink-700 pt-3 flex flex-col items-center gap-2">
-        <p className="font-sans text-sm font-semibold text-bone-300">
+      <div className="w-full text-center border-t border-paper-200 pt-3 flex flex-col items-center gap-2">
+        <p className="font-sans text-sm font-semibold text-espresso-700">
           {sublabel}
         </p>
         <div

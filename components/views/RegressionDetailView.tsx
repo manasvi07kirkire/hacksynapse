@@ -233,24 +233,23 @@ export function RegressionDetailView({
             </div>
 
             {/* 3. Full-Width Dark Root Cause Panel (12 cols) */}
-            <div className="lg:col-span-12 bg-darkSurface-panel border border-ink-700 rounded-sm p-5 sm:p-6 flex flex-col gap-5 text-bone-300">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-700 pb-4">
+            <div className="lg:col-span-12 bg-surface border border-paper-200 rounded-sm p-5 sm:p-6 flex flex-col gap-5 text-espresso-700">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-paper-200 pb-4">
                 <div className="flex items-center gap-2.5">
-                  <FileCode className="w-5 h-5 text-ember-400" />
-                  <span className="font-mono text-sm sm:text-base font-bold text-bone-100 uppercase tracking-wider">
+                  <FileCode className="w-5 h-5 text-ember-600" />
+                  <span className="font-mono text-sm sm:text-base font-bold text-espresso-900 uppercase tracking-wider">
                     AST ROOT CAUSE & AUTONOMOUS TIER-A REMEDIATION
                   </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-sm">
-                  <span className="text-bone-500">Target File:</span>
-                  <code className="text-bone-100 bg-ink-900 px-2.5 py-1 rounded-sm border border-ink-700 font-bold text-xs sm:text-sm">
+                  <span className="text-bone-700">Target File:</span>
+                  <code className="text-espresso-900 bg-paper-50 px-2.5 py-1 rounded-sm border border-paper-200 font-bold text-xs sm:text-sm">
                     src/app/products/[slug]/page.tsx:184
                   </code>
                 </div>
               </div>
 
-              {/* Code Diff Block */}
-              <div className="bg-darkSurface-code border border-ink-700 rounded-sm p-4 font-mono text-xs sm:text-sm overflow-x-auto">
+              <div className="bg-darkSurface-code border border-paper-200 rounded-sm p-4 font-mono text-xs sm:text-sm overflow-x-auto">
                 <pre className="text-bone-300 leading-relaxed">
                   <div className="text-bone-500 font-bold">
                     --- a/src/app/products/[slug]/page.tsx (Commit: 8f4a2b9)
@@ -270,17 +269,17 @@ export function RegressionDetailView({
                     {" "}
                     description: product.summary,
                   </div>
-                  <div className="bg-ember-tint text-ember-400 font-semibold px-1 py-0.5 rounded-sm">
+                  <div className="bg-ember-soft/50 text-ember-600 font-semibold px-1 py-0.5 rounded-sm">
                     - // canonical omitted in refactor
                   </div>
-                  <div className="bg-patina-tint text-patina-400 font-semibold px-1 py-0.5 rounded-sm">
+                  <div className="bg-patina-soft/50 text-patina-400 font-semibold px-1 py-0.5 rounded-sm">
                     + alternates: &#123;
                   </div>
-                  <div className="bg-patina-tint text-patina-400 font-semibold px-1 py-0.5 rounded-sm">
+                  <div className="bg-patina-soft/50 text-patina-400 font-semibold px-1 py-0.5 rounded-sm">
                     + canonical:
                     `https://store.acme-industrial.com/products/$&#123;params.slug&#125;`,
                   </div>
-                  <div className="bg-patina-tint text-patina-400 font-semibold px-1 py-0.5 rounded-sm">
+                  <div className="bg-patina-soft/50 text-patina-400 font-semibold px-1 py-0.5 rounded-sm">
                     + &#125;,
                   </div>
                   <div className="text-bone-300"> &#125;;</div>
@@ -288,16 +287,15 @@ export function RegressionDetailView({
                 </pre>
               </div>
 
-              {/* Automated Gates & Action */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-ink-700">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-paper-200">
                 <div className="flex items-center gap-4 font-mono text-xs sm:text-sm flex-wrap">
-                  <span className="flex items-center gap-1.5 text-patina-400 font-medium">
+                  <span className="flex items-center gap-1.5 text-patina-600 font-medium">
                     <CheckCircle className="w-4 h-4" /> 1. AST Validated
                   </span>
-                  <span className="flex items-center gap-1.5 text-patina-400 font-medium">
+                  <span className="flex items-center gap-1.5 text-patina-600 font-medium">
                     <CheckCircle className="w-4 h-4" /> 2. Rules 0 Violation
                   </span>
-                  <span className="flex items-center gap-1.5 text-patina-400 font-medium">
+                  <span className="flex items-center gap-1.5 text-patina-600 font-medium">
                     <CheckCircle className="w-4 h-4" /> 3. Clean Build
                   </span>
                 </div>
@@ -317,7 +315,7 @@ export function RegressionDetailView({
                       </span>
                     </button>
                   ) : (
-                    <div className="flex items-center gap-2 font-mono text-sm font-bold text-patina-400 bg-patina-tint px-5 py-2.5 rounded-sm border border-patina-400/40">
+                    <div className="flex items-center gap-2 font-mono text-sm font-bold text-patina-600 bg-patina-soft px-5 py-2.5 rounded-sm border border-patina-600/30">
                       <Check className="w-4 h-4" />
                       <span>PR #185 MERGED & DEPLOYED (REMEDIATED)</span>
                     </div>

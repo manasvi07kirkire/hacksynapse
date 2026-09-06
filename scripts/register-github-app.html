@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Register SearchOps GitHub App</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 640px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      button {
+        font-size: 1rem;
+        padding: 0.75rem 1.25rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Register SearchOps GitHub App</h1>
+    <p>
+      Click the button below to open GitHub with the correct permissions, webhook URL, and
+      events pre-filled. Confirm with <strong>Create GitHub App</strong> on GitHub.
+    </p>
+    <p>Make sure <code>npm run setup:github-app</code> is running in a terminal first (it listens for the callback).</p>
+    <form method="post" action="https://github.com/settings/apps/new">
+      <input type="hidden" name="manifest" id="manifest" />
+      <button type="submit">Register on GitHub</button>
+    </form>
+    <script>
+      document.getElementById("manifest").value = JSON.stringify({
+        name: "SearchOps Discoverability",
+        url: "https://searchops-vert.vercel.app",
+        hook_attributes: {
+          url: "https://searchops-vert.vercel.app/api/webhooks/github",
+          active: true,
+        },
+        redirect_url: "http://127.0.0.1:9876/callback",
+        public: false,
+        default_permissions: {
+          metadata: "read",
+          contents: "write",
+          pull_requests: "write",
+          statuses: "write",
+        },
+        default_events: ["push"],
+      });
+    </script>
+  </body>
+</html>

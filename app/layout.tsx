@@ -29,7 +29,7 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body className="bg-bone-100 text-ink-900 font-sans antialiased selection:bg-ember-600/20 selection:text-ember-600 min-h-screen">
+      <body>
         <ProjectAccess>{children}</ProjectAccess>
       </body>
     </html>

@@ -13,7 +13,7 @@ export const RoadmapBadge: React.FC<RoadmapBadgeProps> = ({
   return (
     <span
       className={clsx(
-        "inline-flex items-center px-2 py-0.5 rounded-sm bg-ink-850 border border-steel-400/40 font-mono text-xs font-bold text-steel-400 uppercase tracking-widest",
+        "inline-flex items-center px-2 py-0.5 rounded-sm bg-paper-50 border border-paper-200 font-mono text-xs font-bold text-bone-700 uppercase tracking-widest",
         className,
       )}
     >

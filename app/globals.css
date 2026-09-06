@@ -1,41 +1,173 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
+:root {
+  --paper-50: #f6f0e6;
+  --paper-100: #ede4d5;
+  --paper-200: #e0d4c0;
+  --espresso-900: #1b1510;
+  --espresso-700: #453a2e;
+  --ember-600: #c23f10;
+  --ember-500: #e8531c;
+  --patina-600: #2e6e62;
+  --marigold-600: #b4791f;
+  --ember-soft: #fef3ee;
+  --patina-soft: #eef8f5;
+  --marigold-soft: #fef8ee;
+  --surface: #ffffff;
+  --surface-muted: #f6f0e6;
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 8px;
+  --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur: 160ms;
 }
 
-body {
-  background-color: #f4ede1;
-  color: #100e0c;
-  font-family:
-    "Hanken Grotesk",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--paper-50);
+    color: var(--espresso-900);
+    font-family: "Hanken Grotesk", Carlito, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  ::selection {
+    background-color: rgba(194, 63, 16, 0.15);
+    color: var(--espresso-900);
+  }
+
+  .font-mono,
+  code,
+  pre,
+  .tabular-nums {
+    font-family: "JetBrains Mono", "Commit Mono", "DejaVu Sans Mono", ui-monospace,
+      monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2 {
+    font-family: Fraunces, "TeX Gyre Pagella", Palatino, Georgia, serif;
+    color: var(--espresso-900);
+    letter-spacing: -0.02em;
+  }
+
+  h3,
+  h4 {
+    color: var(--espresso-900);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-/* Enforce tabular numerals on all monospace and numeric data elements */
-.font-mono,
-code,
-pre,
-.tabular-nums {
-  font-family:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    monospace;
-  font-variant-numeric: tabular-nums;
+@layer components {
+  .page-container {
+    @apply mx-auto w-full px-4 py-8 sm:px-6 sm:py-10 lg:px-8;
+    max-width: 75rem;
+  }
+
+  .page-container-narrow {
+    @apply mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8;
+  }
+
+  .section-label,
+  .mono-label {
+    @apply font-mono font-medium uppercase;
+    color: var(--ember-600);
+    font-size: 0.6875rem;
+    line-height: 0.875rem;
+    letter-spacing: 0.06em;
+  }
+
+  .instrument-panel {
+    @apply rounded-lg border;
+    border-color: var(--paper-200);
+    background-color: var(--surface);
+  }
+
+  .instrument-card {
+    @apply rounded-lg border;
+    border-color: var(--paper-200);
+    background-color: var(--surface-muted);
+  }
+
+  .hairline-divider {
+    border-color: var(--paper-200);
+  }
+
+  .overlay-backdrop {
+    @apply fixed inset-0 z-40;
+    background-color: rgba(27, 21, 16, 0.35);
+  }
+
+  .drawer-slide-in {
+    animation: slideInRight 280ms cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow:
+      0 0 0 2px var(--paper-50),
+      0 0 0 4px var(--ember-500);
+  }
+
+  .alert-region {
+    border-left-width: 3px;
+    border-left-color: var(--ember-600);
+    background-color: var(--ember-soft);
+  }
+
+  .success-region {
+    border-left-width: 3px;
+    border-left-color: var(--patina-600);
+    background-color: var(--patina-soft);
+  }
+
+  .warning-region {
+    border-left-width: 3px;
+    border-left-color: var(--marigold-600);
+    background-color: var(--marigold-soft);
+  }
 }
 
-/* Field Manual Animations */
 @keyframes pulse-border {
   0%,
   100% {
@@ -67,6 +199,15 @@ pre,
   }
 }
 
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 .pulse-error-border {
   animation: pulse-border 2s infinite ease-in-out;
 }
@@ -81,7 +222,6 @@ pre,
   animation: flow-line 1s linear infinite;
 }
 
-/* Hide scrollbar helper */
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -91,21 +231,20 @@ pre,
   display: none;
 }
 
-/* Field Manual Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f4ede1;
+  background: var(--paper-100);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d6cbb8;
-  border-radius: 4px;
+  background: var(--paper-200);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a2937c;
+  background: #c4b6a0;
 }

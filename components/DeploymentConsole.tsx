@@ -1,10 +1,37 @@
 "use client";
+
 import { useCallback, useEffect, useState, useRef } from "react";
+import Link from "next/link";
+import {
+  ArrowUpRight,
+  GitCommit,
+  RefreshCw,
+  RotateCcw,
+  XCircle,
+} from "lucide-react";
 import { useProject } from "./ProjectAccess";
 import { FindingCard } from "./ui/FindingCard";
 import { Gauge } from "./ui/Gauge";
 import { FindingData } from "../lib/detect/types";
-import Link from "next/link";
+import { Alert } from "./ui/Badge";
+import { Button, ButtonLink } from "./ui/Button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Panel,
+} from "./ui/Card";
+import { PageHeader, PageSection, StatTile } from "./ui/PageLayout";
+import { StatusBadge } from "./ui/Badge";
+import {
+  WorkerStatusBanner,
+  type WorkerStatus,
+} from "./ui/WorkerStatusBanner";
+import { DeploymentSetupGuide } from "./connect/DeploymentSetupGuide";
+import { needsRevisionSetup } from "../lib/connect/deployment-setup";
+
 interface Deployment {
   id: string;
   sha: string;
@@ -29,7 +56,33 @@ interface Deployment {
   }[];
   recoveries?: { id: string; verifiedAt: string; finding: { type: string } }[];
   score: { searchHealth: number; geoScore: number } | null;
+  findingCount?: number;
+  recoveryCount?: number;
 }
+
+function mergeDeployments(
+  prev: Deployment[],
+  incoming: Deployment[],
+): Deployment[] {
+  const prevById = new Map(prev.map((d) => [d.id, d]));
+  return incoming.map((d) => {
+    const existing = prevById.get(d.id);
+    if (!existing) return d;
+    return {
+      ...existing,
+      ...d,
+      findings: d.findings.length ? d.findings : existing.findings,
+      recoveries: d.recoveries?.length ? d.recoveries : existing.recoveries,
+    };
+  });
+}
+
+function hasActiveJob(items: Deployment[]) {
+  return items.some((d) =>
+    d.jobs?.some((j) => ["QUEUED", "RUNNING"].includes(j.status)),
+  );
+}
+
 export default function Watch({
   deployNumber,
   view = "dashboard",
@@ -40,43 +93,118 @@ export default function Watch({
   const { project } = useProject();
   const [items, setItems] = useState<Deployment[]>([]);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"info" | "success" | "error">(
+    "info",
+  );
   const [busy, setBusy] = useState(false);
+  const [worker, setWorker] = useState<WorkerStatus | null>(null);
   const currentProject = useRef(project?.id);
+  const jobStatuses = useRef<Map<string, string>>(new Map());
   currentProject.current = project?.id;
+
   const reload = useCallback(
-    async (signal?: AbortSignal) => {
+    async (
+      detail: "summary" | "full" = "full",
+      signal?: AbortSignal,
+    ): Promise<Deployment[]> => {
       if (!project) {
         setItems([]);
-        return;
+        setWorker(null);
+        return [];
       }
-      const res = await fetch(
-        `/api/deployments?projectId=${project.id}${deployNumber ? `&deployNumber=${deployNumber}` : ""}`,
-        {
-          signal,
-        },
-      );
+      const params = new URLSearchParams({ projectId: project.id, detail });
+      if (deployNumber) params.set("deployNumber", String(deployNumber));
+      const res = await fetch(`/api/deployments?${params}`, { signal });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      if (!signal?.aborted) setItems(data.deployments);
+      if (signal?.aborted) return [];
+
+      const deployments: Deployment[] = data.deployments;
+      if (detail === "summary") {
+        if (data.worker) setWorker(data.worker);
+        let merged: Deployment[] = [];
+        setItems((prev) => {
+          merged = mergeDeployments(prev, deployments);
+          return merged;
+        });
+        return merged;
+      }
+      setItems(deployments);
+      return deployments;
     },
     [project, deployNumber],
   );
+
   useEffect(() => {
     const controller = new AbortController();
     setItems([]);
+    setWorker(null);
     setMessage("");
-    const refresh = () => {
-      void reload(controller.signal).catch((e) => {
-        if (!controller.signal.aborted) setMessage(e.message);
-      });
+    jobStatuses.current = new Map();
+
+    const trackJobs = (deployments: Deployment[]) => {
+      for (const d of deployments) {
+        for (const job of d.jobs ?? []) {
+          jobStatuses.current.set(job.id, job.status);
+        }
+      }
     };
-    refresh();
-    const timer = setInterval(refresh, 5000);
+
+    let timer: ReturnType<typeof setTimeout>;
+    let latest: Deployment[] = [];
+
+    void (async () => {
+      try {
+        latest = await reload("full", controller.signal);
+        if (controller.signal.aborted) return;
+        trackJobs(latest);
+
+        while (!controller.signal.aborted) {
+          await new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, hasActiveJob(latest) ? 4000 : 8000);
+          });
+          if (controller.signal.aborted) break;
+
+          const summary = await reload("summary", controller.signal);
+          if (controller.signal.aborted) break;
+          latest = summary;
+
+          let needsFull = false;
+          for (const d of summary) {
+            for (const job of d.jobs ?? []) {
+              const prev = jobStatuses.current.get(job.id);
+              if (
+                prev &&
+                ["QUEUED", "RUNNING"].includes(prev) &&
+                !["QUEUED", "RUNNING"].includes(job.status)
+              ) {
+                needsFull = true;
+                break;
+              }
+            }
+            if (needsFull) break;
+          }
+
+          if (needsFull) {
+            latest = await reload("full", controller.signal);
+            if (controller.signal.aborted) break;
+          }
+          trackJobs(latest);
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          setMessageType("error");
+          setMessage(e instanceof Error ? e.message : "Refresh failed.");
+        }
+      }
+    })();
+
     return () => {
       controller.abort();
-      clearInterval(timer);
+      clearTimeout(timer);
     };
   }, [reload]);
+
   async function run(finding?: FindingData) {
     if (!project) return;
     setBusy(true);
@@ -95,18 +223,21 @@ export default function Watch({
       const data = await res.json();
       if (currentProject.current !== project.id) return;
       if (!res.ok) throw new Error(data.error);
+      setMessageType("success");
       setMessage(
         finding
           ? `Pull request opened: ${data.prUrl}`
-          : `Analysis queued: ${data.jobId}`,
+          : `Analysis queued — job ${data.jobId}`,
       );
       await reload();
     } catch (e) {
+      setMessageType("error");
       setMessage(e instanceof Error ? e.message : "Operation failed.");
     } finally {
       setBusy(false);
     }
   }
+
   async function jobAction(
     jobId: string,
     action: "retry" | "cancel" | "recheck",
@@ -125,169 +256,300 @@ export default function Watch({
       const data = await response.json();
       if (currentProject.current !== project.id) return;
       if (!response.ok) throw new Error(data.error);
-      setMessage(`${action}: ${data.status}`);
+      setMessageType("info");
+      setMessage(`Job ${action}: ${data.status}`);
       await reload();
     } catch (error) {
+      setMessageType("error");
       setMessage(error instanceof Error ? error.message : "Job action failed.");
     } finally {
       setBusy(false);
     }
   }
+
   const latest = items[0];
+  const latestDegradation: string[] = latest
+    ? JSON.parse(latest.degradation)
+    : [];
+  const showSetupGuide =
+    !!project &&
+    !!latest &&
+    (latest.status === "DEGRADED" || needsRevisionSetup(latestDegradation));
+  const viewMeta = {
+    dashboard: {
+      eyebrow: "Live watch",
+      title: project?.repo || "Select a project",
+      description:
+        "Deploy → observe → detect → diagnose → remediate → verify",
+    },
+    regression: {
+      eyebrow: "Regression analysis",
+      title: "Regression evidence",
+      description: "Findings and degradation signals from persisted deployments",
+    },
+    remediation: {
+      eyebrow: "Recovery & PRs",
+      title: "Remediation pipeline",
+      description: "Pull requests, patch validation, and verified recovery",
+    },
+  }[view];
+
   return (
-    <main className="max-w-6xl mx-auto p-6 sm:p-8 space-y-6 bg-bone-100 min-h-screen">
-      <header className="border-b-2 border-bone-300 pb-5 space-y-2">
-        <p className="font-mono text-xs font-bold text-ember-600 uppercase tracking-widest">
-          Live Watch · Connected project
-        </p>
-        <h1 className="font-mono font-black text-3xl sm:text-4xl text-ink-900">
-          {project?.repo || "Select a connected project"}
-        </h1>
-        <p className="text-sm text-bone-700">
-          {view === "regression"
-            ? "Regression evidence from persisted deployments"
-            : view === "remediation"
-              ? "Pull requests and verified recovery"
-              : "Deploy → observe → detect → diagnose → remediate → verify"}
-        </p>
-      </header>
-      <div className="flex flex-wrap gap-3">
-        <button
-          disabled={!project || busy}
-          onClick={() => void run()}
-          className="bg-ember-600 hover:bg-ember-600/90 text-bone-100 px-5 py-2.5 rounded-sm font-semibold disabled:opacity-50"
+    <div className="page-container animate-fade-in">
+      <PageHeader
+        eyebrow={viewMeta.eyebrow}
+        title={viewMeta.title}
+        description={viewMeta.description}
+        actions={
+          <>
+            <ButtonLink href="/graph" variant="outline" size="sm">
+              Graph
+            </ButtonLink>
+            <ButtonLink href="/seo-advisor" variant="outline" size="sm">
+              SEO Advisor
+            </ButtonLink>
+            <ButtonLink href="/geo" variant="outline" size="sm">
+              Citation test
+            </ButtonLink>
+            <Button
+              disabled={!project || busy}
+              loading={busy && !latest}
+              onClick={() => void run()}
+              size="sm"
+            >
+              Analyze deployment
+            </Button>
+          </>
+        }
+      />
+
+      <WorkerStatusBanner
+        worker={worker}
+        onRefresh={() => void reload("summary")}
+      />
+
+      {showSetupGuide && (
+        <DeploymentSetupGuide
+          className="mt-6"
+          compact
+          siteUrl={project?.siteUrl}
+        />
+      )}
+
+      {message && (
+        <Alert
+          variant={
+            messageType === "error"
+              ? "error"
+              : messageType === "success"
+                ? "success"
+                : "info"
+          }
+          className="mt-6"
         >
-          Analyze current deployment
-        </button>
-        <Link href="/graph" className="border border-bone-300 px-4 py-2 rounded-sm">
-          Graph
-        </Link>
-        <Link href="/seo-advisor" className="border border-bone-300 px-4 py-2 rounded-sm">
-          SEO Advisor
-        </Link>
-        <Link href="/geo" className="border border-bone-300 px-4 py-2 rounded-sm">
-          Citation test
-        </Link>
-      </div>
-      <p role="status" className="text-sm font-medium text-ink-900">
-        {message}
-      </p>
+          {message}
+        </Alert>
+      )}
+
       {latest?.score && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <Gauge
-            value={latest.score.searchHealth}
-            title="Search Crawler Health"
-            lensLabel="SEARCH LENS"
-          />
-          <Gauge
-            value={latest.score.geoScore}
-            title="AI-Answer Citation-Readiness (GEO)"
-            lensLabel="AI-ANSWER LENS"
-          />
-        </section>
+        <PageSection className="mt-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:hidden">
+            <StatTile label="Search health" value={`${latest.score.searchHealth}`} />
+            <StatTile label="GEO score" value={`${latest.score.geoScore}`} />
+          </div>
+          <div className="hidden lg:grid lg:grid-cols-2 lg:gap-5">
+            <Gauge
+              value={latest.score.searchHealth}
+              title="Search Crawler Health"
+              lensLabel="SEARCH LENS"
+            />
+            <Gauge
+              value={latest.score.geoScore}
+              title="AI Citation Readiness (GEO)"
+              lensLabel="AI-ANSWER LENS"
+            />
+          </div>
+        </PageSection>
       )}
+
       {!items.length && (
-        <p className="text-bone-700 border border-bone-300 rounded-sm p-6 bg-white">
-          {project
-            ? "No deployments yet. Analyze the deployed revision to establish a baseline."
-            : "Sign in and connect a repository to begin."}
-        </p>
+        <EmptyState
+          className="mt-8"
+          title={project ? "No deployments yet" : "No project connected"}
+          description={
+            project
+              ? "Run an analysis on the current deployed revision to establish a baseline."
+              : "Sign in and connect a repository to begin monitoring."
+          }
+          action={
+            project ? (
+              <Button disabled={busy} loading={busy} onClick={() => void run()}>
+                Run first analysis
+              </Button>
+            ) : (
+              <ButtonLink href="/connect">Connect repository</ButtonLink>
+            )
+          }
+        />
       )}
-      {items.map((d) => (
-        <article
-          key={d.id}
-          className="border border-bone-300 bg-white rounded-md p-5 space-y-3 shadow-sm"
-        >
-          <h2>
-            Deployment #{d.deployNumber} · {d.status} · {d.sha.slice(0, 12)}
-          </h2>
-          {d.score && (
-            <p>
-              Search health: {d.score.searchHealth}/100 · GEO:{" "}
-              {d.score.geoScore}/100
-            </p>
-          )}
-          <p className="text-sm">{JSON.parse(d.degradation).join(", ")}</p>
-          {d.jobs?.map((job) => (
-            <div key={job.id} className="flex gap-3 flex-wrap text-sm">
-              <span>
-                Job: {job.status} · Attempt {job.attempts} {job.errorCode}
-              </span>
-              {job.status === "FAILED" && (
-                <button
-                  disabled={busy}
-                  onClick={() => void jobAction(job.id, "retry")}
+
+      <div className="mt-8 space-y-5">
+        {items.map((d) => (
+          <Card key={d.id} className="overflow-hidden">
+            <CardHeader className="bg-paper-50">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-sm border border-paper-200 bg-surface">
+                    <GitCommit className="h-4 w-4 stroke-[1.5] text-bone-500" />
+                  </div>
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold font-sans">
+                      Deployment #{d.deployNumber}
+                      <StatusBadge status={d.status} />
+                    </CardTitle>
+                    <p className="mt-0.5 font-mono text-xs text-bone-500">
+                      {d.sha.slice(0, 12)}
+                    </p>
+                  </div>
+                </div>
+                {d.score && (
+                  <div className="flex gap-4 font-mono text-sm tabular-nums">
+                    <span>
+                      <span className="text-bone-500">Search </span>
+                      <strong className="text-espresso-900">
+                        {d.score.searchHealth}
+                      </strong>
+                    </span>
+                    <span>
+                      <span className="text-bone-500">GEO </span>
+                      <strong className="text-espresso-900">
+                        {d.score.geoScore}
+                      </strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {JSON.parse(d.degradation).length > 0 && (
+                <Alert variant="warning">
+                  {JSON.parse(d.degradation).join(" · ")}
+                </Alert>
+              )}
+
+              {d.jobs?.map((job) => (
+                <Panel
+                  key={job.id}
+                  variant="muted"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
                 >
-                  Retry analysis
-                </button>
-              )}
-              {["QUEUED", "RUNNING"].includes(job.status) && (
-                <button
-                  disabled={busy}
-                  onClick={() => void jobAction(job.id, "cancel")}
-                >
-                  Cancel analysis
-                </button>
-              )}
-              {job.status === "COMPLETE" && d.status === "DEGRADED" && (
-                <button
-                  disabled={busy}
-                  onClick={() => void jobAction(job.id, "recheck")}
-                >
-                  Recheck deployed revision
-                </button>
-              )}
-            </div>
-          ))}
-          {d.recoveries?.map((r) => (
-            <p key={r.id} className="text-patina-600">
-              Verified recovery: {r.finding.type} ·{" "}
-              {new Date(r.verifiedAt).toLocaleString()}
-            </p>
-          ))}
-          {d.findings.map((f) => (
-            <div key={f.id} className="space-y-2">
-              <FindingCard
-                key={f.id}
-                finding={f}
-                onGenerateFix={
-                  f.status === "OPEN" ? () => void run(f) : undefined
-                }
-                isFixing={busy}
-              />
-              {f.recovery && (
-                <p>
-                  Recovered in deployment {f.recovery.deploymentId}. Verified
-                  from deployed evidence; PR merge is not assumed.
-                </p>
-              )}
-              <details>
-                <summary>Recorded evidence</summary>
-                <pre className="overflow-auto p-3 text-xs">
-                  {JSON.stringify(f.evidence, null, 2)}
-                </pre>
-              </details>
-              {f.remediations?.map((r) => (
-                <div key={r.id} className="border p-3">
-                  {r.prUrl && (
-                    <a href={r.prUrl} target="_blank" rel="noreferrer">
-                      Review PR #{r.prNumber}
-                    </a>
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <StatusBadge status={job.status} />
+                    <span className="text-bone-700">
+                      Attempt {job.attempts}
+                      {job.errorCode && ` · ${job.errorCode}`}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {job.status === "FAILED" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void jobAction(job.id, "retry")}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Retry
+                      </Button>
+                    )}
+                    {["QUEUED", "RUNNING"].includes(job.status) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void jobAction(job.id, "cancel")}
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Cancel
+                      </Button>
+                    )}
+                    {job.status === "COMPLETE" && d.status === "DEGRADED" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void jobAction(job.id, "recheck")}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Recheck
+                      </Button>
+                    )}
+                  </div>
+                </Panel>
+              ))}
+
+              {d.recoveries?.map((r) => (
+                <Alert key={r.id} variant="success">
+                  Verified recovery: {r.finding.type} ·{" "}
+                  {new Date(r.verifiedAt).toLocaleString()}
+                </Alert>
+              ))}
+
+              {d.findings.map((f) => (
+                <div key={f.id} className="space-y-3">
+                  <FindingCard
+                    finding={f}
+                    onGenerateFix={
+                      f.status === "OPEN" ? () => void run(f) : undefined
+                    }
+                    isFixing={busy}
+                  />
+                  {f.recovery && (
+                    <p className="text-sm text-patina-700">
+                      Recovered in deployment {f.recovery.deploymentId}. Verified
+                      from deployed evidence — PR merge is not assumed.
+                    </p>
                   )}
-                  <details>
-                    <summary>Patch and validation</summary>
-                    <pre className="overflow-auto text-xs">
-                      {r.patchDiff}
-                      {"\n"}
-                      {JSON.stringify(JSON.parse(r.validationResult), null, 2)}
+                  <details className="group rounded-md border border-paper-200 bg-paper-50">
+                    <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-espresso-700 hover:bg-paper-100">
+                      Recorded evidence
+                    </summary>
+                    <pre className="overflow-auto border-t border-paper-200 p-4 font-mono text-xs text-espresso-700">
+                      {JSON.stringify(f.evidence, null, 2)}
                     </pre>
                   </details>
+                  {f.remediations?.map((r) => (
+                    <Panel key={r.id} variant="muted" className="p-4 space-y-3">
+                      {r.prUrl && (
+                        <a
+                          href={r.prUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-ember-600 hover:underline"
+                        >
+                          Review PR #{r.prNumber}
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      <details>
+                        <summary className="cursor-pointer text-sm font-medium text-espresso-700">
+                          Patch and validation
+                        </summary>
+                        <pre className="mt-2 overflow-auto rounded-md bg-paper-50 border border-paper-200 p-3 text-xs text-espresso-700">
+                          {r.patchDiff}
+                          {"\n"}
+                          {JSON.stringify(JSON.parse(r.validationResult), null, 2)}
+                        </pre>
+                      </details>
+                    </Panel>
+                  ))}
                 </div>
               ))}
-            </div>
-          ))}
-        </article>
-      ))}
-    </main>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }

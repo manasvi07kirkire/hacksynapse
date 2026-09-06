@@ -112,9 +112,9 @@ export const ClosedLoopTelemetryStepper: React.FC<
                 className={clsx(
                   "shrink-0 w-9 h-9 rounded-sm flex items-center justify-center border-2 z-10",
                   isDone
-                    ? "bg-patina-tint border-patina-400 text-patina-400"
+                    ? "bg-patina-soft border-patina-600 text-patina-600"
                     : isActive
-                      ? "bg-ember-tint border-ember-400 text-ember-400 node-active"
+                      ? "bg-ember-soft border-ember-600 text-ember-600 node-active"
                       : "bg-bone-300/30 border-bone-300 text-bone-500",
                 )}
               >

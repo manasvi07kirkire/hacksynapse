@@ -18,6 +18,8 @@
     "demo": "node --import tsx scripts/test-db.ts",
     "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts",
     "deploy:preflight": "node --env-file-if-exists=.env --import tsx scripts/preflight.ts",
+    "setup:github-app": "node --import tsx scripts/setup-github-app.ts",
+    "bootstrap:revision-marker": "node --env-file-if-exists=.env --import tsx scripts/bootstrap-revision-marker.ts",
     "test:live": "node --env-file-if-exists=.env --import tsx scripts/live-smoke.ts",
     "db:migrate": "prisma migrate deploy",
     "db:validate": "prisma validate",

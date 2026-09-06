@@ -108,7 +108,7 @@ export const FieldManualNav: React.FC<FieldManualNavProps> = ({
               </div>
             </Link>
 
-            <span className="hidden lg:inline text-bone-300 font-mono text-base">
+            <span className="hidden lg:inline text-paper-200 font-mono text-base">
               |
             </span>
 
@@ -134,7 +134,7 @@ export const FieldManualNav: React.FC<FieldManualNavProps> = ({
                       ? link.href === "/seo-advisor"
                         ? "border-steel-400 text-ink-900 bg-bone-300/30"
                         : link.href === "/remediation"
-                          ? "border-patina-500 text-patina-600 bg-patina-tint/10"
+                          ? "border-patina-500 text-patina-600 bg-patina-soft"
                           : "border-ember-600 text-ink-900 bg-bone-300/30"
                       : "border-transparent text-bone-700 hover:text-ink-900 hover:border-bone-400 hover:bg-bone-300/20",
                   )}

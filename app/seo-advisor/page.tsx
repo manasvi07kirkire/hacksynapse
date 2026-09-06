@@ -1,8 +1,32 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Check, Sparkles, X } from "lucide-react";
 import { useProject } from "../../components/ProjectAccess";
 import { Suggestion } from "../../lib/seo-advisor/types";
+import { Alert } from "../../components/ui/Badge";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Panel,
+} from "../../components/ui/Card";
+import {
+  FieldGroup,
+  Input,
+  Label,
+  Select,
+  Textarea,
+} from "../../components/ui/FormControls";
+import { PageHeader, PageSection } from "../../components/ui/PageLayout";
+
 type Scan = { scanId: string; suggestions: Suggestion[]; provenance?: string };
+
 export default function SeoAdvisorPage() {
   const { project } = useProject();
   const [url, setUrl] = useState("");
@@ -19,6 +43,7 @@ export default function SeoAdvisorPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef<AbortController | null>(null);
+
   useEffect(() => {
     pending.current?.abort();
     setBusy(false);
@@ -31,6 +56,7 @@ export default function SeoAdvisorPage() {
     setUrl(project?.siteUrl || "");
     return () => pending.current?.abort();
   }, [project]);
+
   const setStatus = (id: string, status: Suggestion["status"]) =>
     setScan((value) =>
       value
@@ -42,6 +68,7 @@ export default function SeoAdvisorPage() {
           }
         : null,
     );
+
   async function submit(apply = false) {
     if (!project || busy) return;
     const controller = new AbortController();
@@ -100,146 +127,235 @@ export default function SeoAdvisorPage() {
       if (!controller.signal.aborted) setBusy(false);
     }
   }
+
+  const approvedCount =
+    scan?.suggestions.filter((s) => s.status === "approved").length ?? 0;
+
   return (
-    <main className="max-w-5xl mx-auto p-8 space-y-6">
-      <h1 className="font-mono text-3xl">SEO Advisor</h1>
-      <p>
-        {project?.repo || "Connect a project to scan and improve its source."}
-      </p>
-      <form
-        className="grid gap-4 border p-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <label>
-          Scan source
-          <select
-            className="border p-2 w-full"
-            value={sourceMode}
-            onChange={(e) => setSourceMode(e.target.value)}
-          >
-            <option value="url">Deployed page</option>
-            <option value="pr">Open pull request</option>
-          </select>
-        </label>
-        <label>
-          Page URL
-          <input
-            type="url"
-            required={sourceMode === "url"}
-            className="border p-2 w-full"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-        </label>
-        {sourceMode === "pr" && (
-          <label>
-            Pull request number
-            <input
-              type="number"
-              min="1"
-              required
-              className="border p-2 w-full"
-              value={prNumber}
-              onChange={(e) => setPrNumber(e.target.value)}
-            />
-          </label>
-        )}
-        <label>
-          Target keywords
-          <input
-            required
-            className="border p-2 w-full"
-            placeholder="Comma-separated keywords"
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-          />
-        </label>
-        <label>
-          Suggestion mode
-          <select
-            className="border p-2 w-full"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-          >
-            <option value="llm">Configured model</option>
-            <option value="heuristic">Source-based heuristics</option>
-          </select>
-        </label>
-        <button
-          disabled={!project || busy}
-          className="bg-ink-900 text-bone-100 p-3 disabled:opacity-50"
-        >
-          {busy && !scan ? "Scanning..." : "Scan page"}
-        </button>
-      </form>
-      <p role="status">{error}</p>
-      {scan && (
-        <section className="space-y-4">
-          <p>
-            {scan.suggestions.length} suggestions � {scan.provenance}
-          </p>
-          {scan.suggestions.map((s) => (
-            <article key={s.id} className="border p-5 space-y-3">
-              <h2 className="text-xl">{s.location}</h2>
-              <p>Before: {s.before || "(empty)"}</p>
-              <label>
-                Edit suggestion: {s.location}
-                <textarea
-                  aria-label={`Edit suggestion: ${s.location}`}
-                  disabled={!!result || busy}
-                  className="border p-2 w-full"
-                  value={edits[s.id] ?? s.after}
-                  onChange={(e) =>
-                    setEdits((value) => ({ ...value, [s.id]: e.target.value }))
-                  }
-                />
-              </label>
-              <p>{s.rationale}</p>
-              <div className="flex gap-4">
-                <button
-                  disabled={!!result || busy}
-                  aria-pressed={s.status === "approved"}
-                  onClick={() => setStatus(s.id, "approved")}
-                >
-                  Approve
-                </button>
-                <button
-                  disabled={!!result || busy}
-                  aria-pressed={s.status === "rejected"}
-                  onClick={() => setStatus(s.id, "rejected")}
-                >
-                  Reject
-                </button>
-                <span>{s.status}</span>
+    <div className="page-container animate-fade-in">
+      <PageHeader
+        eyebrow="SEO advisor"
+        title="Page optimization suggestions"
+        description={
+          project?.repo
+            ? `Scan ${project.repo} pages and generate actionable SEO improvements with optional draft PRs.`
+            : "Connect a project to scan pages and generate SEO suggestions."
+        }
+      />
+
+      {!project ? (
+        <EmptyState
+          className="mt-8"
+          title="No project connected"
+          description="Connect a repository to use the SEO advisor."
+        />
+      ) : (
+        <div className="mt-8 grid gap-6 lg:grid-cols-5">
+          <Card className="lg:col-span-2 h-fit">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-marigold-soft text-marigold-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Scan configuration</CardTitle>
+                  <CardDescription>
+                    Choose a source page and target keywords.
+                  </CardDescription>
+                </div>
               </div>
-            </article>
-          ))}
-          <button
-            disabled={
-              busy ||
-              !!result ||
-              !scan.suggestions.some((s) => s.status === "approved")
-            }
-            className="bg-ink-900 text-bone-100 p-3 disabled:opacity-50"
-            onClick={() => void submit(true)}
-          >
-            Open combined draft PR
-          </button>
-        </section>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submit();
+                }}
+              >
+                <FieldGroup>
+                  <Label>
+                    Scan source
+                    <Select
+                      value={sourceMode}
+                      onChange={(e) => setSourceMode(e.target.value)}
+                    >
+                      <option value="url">Deployed page</option>
+                      <option value="pr">Open pull request</option>
+                    </Select>
+                  </Label>
+                  <Label required={sourceMode === "url"}>
+                    Page URL
+                    <Input
+                      type="url"
+                      required={sourceMode === "url"}
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                    />
+                  </Label>
+                  {sourceMode === "pr" && (
+                    <Label required>
+                      Pull request number
+                      <Input
+                        type="number"
+                        min="1"
+                        required
+                        value={prNumber}
+                        onChange={(e) => setPrNumber(e.target.value)}
+                      />
+                    </Label>
+                  )}
+                  <Label required hint="Comma-separated">
+                    Target keywords
+                    <Input
+                      required
+                      placeholder="seo, discoverability, crawl"
+                      value={keywords}
+                      onChange={(e) => setKeywords(e.target.value)}
+                    />
+                  </Label>
+                  <Label>
+                    Suggestion mode
+                    <Select
+                      value={mode}
+                      onChange={(e) => setMode(e.target.value)}
+                    >
+                      <option value="llm">Configured model</option>
+                      <option value="heuristic">Source-based heuristics</option>
+                    </Select>
+                  </Label>
+                  <Button
+                    type="submit"
+                    disabled={busy}
+                    loading={busy && !scan}
+                    className="w-full"
+                  >
+                    Scan page
+                  </Button>
+                </FieldGroup>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-span-3 space-y-4">
+            {error && <Alert variant="error">{error}</Alert>}
+
+            {result && (
+              <Alert variant="success">
+                <a
+                  href={result.prUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold hover:underline"
+                >
+                  Review draft PR #{result.prNumber}
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </a>
+              </Alert>
+            )}
+
+            {scan ? (
+              <PageSection
+                title={`${scan.suggestions.length} suggestions`}
+                description={scan.provenance}
+              >
+                <div className="space-y-4">
+                  {scan.suggestions.map((s) => (
+                    <Card key={s.id}>
+                      <CardHeader className="pb-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <CardTitle className="text-base">
+                            {s.location}
+                          </CardTitle>
+                          <Badge
+                            variant={
+                              s.status === "approved"
+                                ? "success"
+                                : s.status === "rejected"
+                                  ? "danger"
+                                  : "neutral"
+                            }
+                          >
+                            {s.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Panel variant="muted" className="p-3">
+                          <p className="text-xs font-medium uppercase tracking-wide text-bone-600">
+                            Before
+                          </p>
+                          <p className="mt-1 text-sm text-espresso-700">
+                            {s.before || "(empty)"}
+                          </p>
+                        </Panel>
+                        <Label>
+                          Suggested change
+                          <Textarea
+                            aria-label={`Edit suggestion: ${s.location}`}
+                            disabled={!!result || busy}
+                            value={edits[s.id] ?? s.after}
+                            onChange={(e) =>
+                              setEdits((value) => ({
+                                ...value,
+                                [s.id]: e.target.value,
+                              }))
+                            }
+                          />
+                        </Label>
+                        <p className="text-sm text-bone-700">{s.rationale}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant={
+                              s.status === "approved" ? "success" : "outline"
+                            }
+                            size="sm"
+                            disabled={!!result || busy}
+                            aria-pressed={s.status === "approved"}
+                            onClick={() => setStatus(s.id, "approved")}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant={
+                              s.status === "rejected" ? "danger" : "outline"
+                            }
+                            size="sm"
+                            disabled={!!result || busy}
+                            aria-pressed={s.status === "rejected"}
+                            onClick={() => setStatus(s.id, "rejected")}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Reject
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  <Button
+                    variant="secondary"
+                    disabled={busy || !!result || approvedCount === 0}
+                    loading={busy && !!scan}
+                    onClick={() => void submit(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    Open combined draft PR
+                    {approvedCount > 0 && ` (${approvedCount} approved)`}
+                  </Button>
+                </div>
+              </PageSection>
+            ) : (
+              !error && (
+                <EmptyState
+                  title="No scan results yet"
+                  description="Configure your scan settings and run a page analysis to see suggestions."
+                />
+              )
+            )}
+          </div>
+        </div>
       )}
-      {result && (
-        <a
-          className="block underline"
-          href={result.prUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Review PR #{result.prNumber}
-        </a>
-      )}
-    </main>
+    </div>
   );
 }

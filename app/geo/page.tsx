@@ -1,6 +1,27 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, Compass, XCircle } from "lucide-react";
 import { useProject } from "../../components/ProjectAccess";
+import { Alert } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Panel,
+} from "../../components/ui/Card";
+import {
+  FieldGroup,
+  Input,
+  Label,
+  Textarea,
+} from "../../components/ui/FormControls";
+import { PageHeader, PageSection, StatTile } from "../../components/ui/PageLayout";
+
 type Citation = {
   modelAnswer: string;
   modelUsed: string;
@@ -11,6 +32,7 @@ type Citation = {
     sourceSupported?: boolean;
   }[];
 };
+
 export default function GeoPage() {
   const { project } = useProject();
   const [url, setUrl] = useState("");
@@ -21,6 +43,7 @@ export default function GeoPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef<AbortController | null>(null);
+
   useEffect(() => {
     const controller = new AbortController();
     pending.current?.abort();
@@ -56,6 +79,7 @@ export default function GeoPage() {
       pending.current?.abort();
     };
   }, [project]);
+
   async function run() {
     if (!project || busy) return;
     const controller = new AbortController();
@@ -91,83 +115,151 @@ export default function GeoPage() {
       if (!controller.signal.aborted) setBusy(false);
     }
   }
+
   return (
-    <main className="max-w-5xl mx-auto p-8 space-y-6">
-      <h1 className="font-mono text-3xl">GEO and citation grounding</h1>
-      <p>
-        {project?.repo || "Connect a project to test its deployed content."}
-      </p>
-      <p>
-        Latest deployment GEO score:{" "}
-        {score === null ? "Not measured" : `${score}/100`}
-      </p>
-      <form
-        className="grid gap-4 border p-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run();
-        }}
-      >
-        <label>
-          Page URL
-          <input
-            required
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="border p-2 w-full"
+    <div className="page-container animate-fade-in">
+      <PageHeader
+        eyebrow="GEO engine"
+        title="Citation grounding test"
+        description={
+          project?.repo
+            ? `Test how well AI answer engines can ground responses in ${project.repo}'s deployed content.`
+            : "Connect a project to test citation grounding on deployed content."
+        }
+      />
+
+      {project && (
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 max-w-lg">
+          <StatTile
+            label="Latest GEO score"
+            value={score === null ? "—" : `${score}`}
+            hint={score !== null ? "out of 100" : "Not measured"}
           />
-        </label>
-        <label>
-          Question
-          <input
-            required
-            maxLength={500}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="border p-2 w-full"
-          />
-        </label>
-        <label>
-          Expected facts (optional, one per line)
-          <textarea
-            value={facts}
-            onChange={(e) => setFacts(e.target.value)}
-            className="border p-2 w-full"
-          />
-        </label>
-        <button
-          disabled={!project || busy}
-          className="bg-ink-900 text-bone-100 p-3 disabled:opacity-50"
-        >
-          {busy ? "Testing..." : "Run citation test"}
-        </button>
-      </form>
-      <p role="status">{error}</p>
-      {result ? (
-        <section className="border p-5 space-y-4">
-          <h2 className="text-xl">Grounding: {result.score}/5</h2>
-          <p>Model: {result.modelUsed}</p>
-          <p className="whitespace-pre-wrap">{result.modelAnswer}</p>
-          <ul>
-            {result.groundedFacts.map((fact, i) => (
-              <li key={i}>
-                {fact.isGrounded
-                  ? "Supported in source and answer"
-                  : "Not supported in both"}
-                : {fact.fact}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : (
-        <p>No citation result for this project yet.</p>
+        </div>
       )}
-      <p className="text-sm text-bone-700">
-        Grounding checks exact normalized phrases against the fetched page and
-        model answer. This does not measure the probability that a search engine
-        will cite your page.
-      </p>
-    </main>
+
+      {!project ? (
+        <EmptyState
+          className="mt-8"
+          title="No project connected"
+          description="Connect a repository to run citation grounding tests."
+        />
+      ) : (
+        <div className="mt-8 grid gap-6 lg:grid-cols-5">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-steel-400/10 text-steel-500">
+                  <Compass className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Run citation test</CardTitle>
+                  <CardDescription>
+                    Ask a question about a page and verify fact grounding.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void run();
+                }}
+              >
+                <FieldGroup>
+                  <Label required>
+                    Page URL
+                    <Input
+                      required
+                      type="url"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                    />
+                  </Label>
+                  <Label required>
+                    Question
+                    <Input
+                      required
+                      maxLength={500}
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </Label>
+                  <Label hint="One fact per line — optional">
+                    Expected facts
+                    <Textarea
+                      value={facts}
+                      onChange={(e) => setFacts(e.target.value)}
+                      placeholder="Fact one&#10;Fact two"
+                    />
+                  </Label>
+                  <Button
+                    type="submit"
+                    disabled={busy}
+                    loading={busy}
+                    className="w-full"
+                  >
+                    Run citation test
+                  </Button>
+                </FieldGroup>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="lg:col-span-3 space-y-4">
+            {error && <Alert variant="error">{error}</Alert>}
+
+            {result ? (
+              <PageSection title="Grounding results">
+                <Card>
+                  <CardHeader className="flex-row items-center justify-between space-y-0">
+                    <CardTitle>Score: {result.score}/5</CardTitle>
+                    <span className="font-mono text-xs text-bone-500">
+                      Model: {result.modelUsed}
+                    </span>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <Panel variant="muted" className="p-4">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-espresso-700">
+                        {result.modelAnswer}
+                      </p>
+                    </Panel>
+                    <ul className="space-y-2">
+                      {result.groundedFacts.map((fact, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2.5 rounded-md border border-paper-200 bg-paper-50 px-3 py-2.5 text-sm"
+                        >
+                          {fact.isGrounded ? (
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-patina-400" />
+                          ) : (
+                            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-ember-400" />
+                          )}
+                          <span className="text-espresso-700">{fact.fact}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </PageSection>
+            ) : (
+              !error && (
+                <EmptyState
+                  title="No citation result yet"
+                  description="Run a test to see how well the model grounds its answer in your page content."
+                />
+              )
+            )}
+
+            <p className="text-xs leading-relaxed text-bone-500">
+              Grounding checks normalized phrases against the fetched page and
+              model answer. This does not measure the probability that a search
+              engine will cite your page.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

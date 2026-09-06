@@ -20,19 +20,19 @@ interface CrawlVerificationTableProps {
 const statusBadge = (code: number) => {
   if (code === 200)
     return (
-      <span className="font-mono text-xs font-bold text-patina-400 bg-patina-tint px-2 py-0.5 rounded-sm border border-patina-400/30">
+      <span className="font-mono text-xs font-bold text-patina-600 bg-patina-soft px-2 py-0.5 rounded-sm border border-patina-600/30">
         200 OK
       </span>
     );
   if (code >= 300 && code < 400)
     return (
-      <span className="font-mono text-xs font-bold text-steel-400 bg-ink-850 px-2 py-0.5 rounded-sm border border-ink-700">
+      <span className="font-mono text-xs font-bold text-steel-400 bg-paper-50 px-2 py-0.5 rounded-sm border border-paper-200">
         {code} REDIRECT
       </span>
     );
   if (code >= 400)
     return (
-      <span className="font-mono text-xs font-bold text-ember-400 bg-ember-tint px-2 py-0.5 rounded-sm border border-ember-400/30">
+      <span className="font-mono text-xs font-bold text-ember-600 bg-ember-soft px-2 py-0.5 rounded-sm border border-ember-600/30">
         {code} ERROR
       </span>
     );
@@ -94,7 +94,7 @@ export const CrawlVerificationTable: React.FC<CrawlVerificationTableProps> = ({
                   key={i}
                   className={clsx(
                     "border-b border-bone-300 last:border-0 transition-colors hover:bg-bone-300/20",
-                    allGood ? "" : "bg-ember-tint/10",
+                    allGood ? "" : "bg-ember-soft/40",
                   )}
                 >
                   {/* Route */}
@@ -140,8 +140,8 @@ export const CrawlVerificationTable: React.FC<CrawlVerificationTableProps> = ({
                       className={clsx(
                         "font-mono text-xs font-bold px-2 py-0.5 rounded-sm border",
                         row.indexing === "YES"
-                          ? "text-patina-400 bg-patina-tint border-patina-400/30"
-                          : "text-ember-400 bg-ember-tint border-ember-400/30",
+                          ? "text-patina-600 bg-patina-soft border-patina-600/30"
+                          : "text-ember-600 bg-ember-soft border-ember-600/30",
                       )}
                     >
                       {row.indexing}
